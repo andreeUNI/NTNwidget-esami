@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Widget materia</title>
+<style>
+/* Variabili: --c (colore materia) viene impostato da JS in base al tema.
+   Niente color-scheme, né qui né nel meta: sfondo trasparente garantito. */
+:root {
+  --text: #37352F;
+  --fill: 14%;
+  --c: #6B6A66;
+  --d: clamp(8px, 14px, 28px);
+  --gap: max(8px, calc(var(--d) * .55));
+  --soft: color-mix(in srgb, var(--text) 74%, transparent);
+  --glass-shine: rgba(255, 255, 255, 0.55);
+  --glass-edge: rgba(255, 255, 255, 0.38);
+  --glass-shadow: rgba(0, 0, 0, 0.14);
+  --cal-start: #FF6B00;
+  --cal-end: #E61919;
+  --cal-text: #D91B1B;
+  --arc-r: 74px;
+}
+/* Unica regola per il tema scuro */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #E6E6E6;
+    --fill: 22%;
+    --glass-shine: rgba(255, 255, 255, 0.22);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --glass-shadow: rgba(0, 0, 0, 0.42);
+  }
+  body.solid { background: #191919; }
+}
+html, body { background: transparent; margin: 0; }
+body.solid { background: #FFFFFF; }
+/* Tema scuro: dopo le regole chiare, altrimenti body.solid ritornerebbe bianco */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #E6E6E6;
+    --fill: 22%;
+    --glass-shine: rgba(255, 255, 255, 0.22);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --glass-shadow: rgba(0, 0, 0, 0.42);
+  }
+  body.solid { background: #191919; }
+}
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+}
+
+/* Contenitore principale Glassmorphism 3D con layout affiancato centrato */
+.box {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: center;
+  justify-items: center;
+  column-gap: clamp(8px, 3vw, 18px);
+  text-align: center;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, rgba(255, 255, 255, 0.35));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--c) calc(var(--fill) + 10%), var(--glass-edge)) 0%,
+    color-mix(in srgb, var(--c) var(--fill), transparent) 55%,
+    color-mix(in srgb, var(--c) calc(var(--fill) + 4%), rgba(0, 0, 0, 0.04)) 100%
+  );
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(16px) saturate(150%);
+  box-shadow:
+    0 8px 24px -4px color-mix(in srgb, var(--c) 22%, var(--glass-shadow)),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.08);
+  color: var(--text);
+}
+.box.neutro {
+  border-color: color-mix(in srgb, var(--text) 22%, rgba(255, 255, 255, 0.25));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--text) 10%, var(--glass-edge)) 0%,
+    color-mix(in srgb, var(--text) 5%, transparent) 100%
+  );
+  box-shadow:
+    0 8px 20px -4px var(--glass-shadow),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+/* Rimozione visiva del nome della materia (nodo preservato nel DOM per i test) */
+.titolo,
+.sk-titolo {
+  display: none !important;
+}
+
+/* Colonna 1 (Sinistra): Riquadro calendario e Griglia */
+.testo,
+.sk-testo,
+.griglia {
+  grid-column: 1;
+}
+.testo:only-child {
+  grid-column: 1 / -1;
+}
+
+/* Riquadro superiore stile Icona Calendario 3D macOS/iOS */
+.testo {
+  position: relative;
+  isolation: isolate;
+  margin: 6px 0 0;
+  padding: 13px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #23262B;
+  overflow-wrap: anywhere;
+  /* Calotta superiore colorata + fallback lastra vitrea inferiore */
+  background:
+    linear-gradient(135deg, var(--cal-start) 0%, var(--cal-end) 100%) 0 0 / 100% 16px no-repeat,
+    radial-gradient(
+      115% 70% at 50% 10px,
+      color-mix(in srgb, var(--cal-end) 24%, rgba(255, 255, 255, 0.94)) 0%,
+      rgba(255, 255, 255, 0.94) 55%,
+      rgba(224, 238, 249, 0.96) 100%
+    );
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  box-shadow:
+    0 6px 16px -2px color-mix(in srgb, var(--cal-end) 26%, rgba(0, 0, 0, 0.28)),
+    0 2px 5px rgba(0, 0, 0, 0.14),
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 -1.5px 2px rgba(165, 190, 215, 0.55);
+}
+
+/* Anelli/Ganci verticali bianchi superiori a forma di pillola */
+.testo::before,
+.testo::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  width: 6.5px;
+  height: 11.5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F2F6FA 68%, #D5DEE8 100%);
+  box-shadow:
+    0 2px 2.5px rgba(0, 0, 0, 0.32),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px #FFFFFF,
+    inset 0 -1px 1px rgba(140, 160, 180, 0.55);
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+.testo::before {
+  left: 28%;
+}
+.testo::after {
+  left: 72%;
+}
+
+/* Lastra frontale in vetro ghiaccio con color bleed e bordo speculare 3D */
+.testo .principale::before {
+  content: "";
+  position: absolute;
+  inset: 9px 0 0 0;
+  border-radius: 12px 12px 13px 13px;
+  background:
+    radial-gradient(
+      115% 68% at 50% 0%,
+      color-mix(in srgb, var(--cal-end) 25%, rgba(255, 255, 255, 0.92)) 0%,
+      color-mix(in srgb, var(--cal-start) 10%, rgba(255, 255, 255, 0.94)) 42%,
+      rgba(244, 249, 253, 0.96) 70%,
+      rgba(222, 236, 248, 0.98) 100%
+    );
+  box-shadow:
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -1.5px 2.5px rgba(170, 195, 220, 0.5),
+    0 -1px 2.5px rgba(0, 0, 0, 0.14);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.testo .principale {
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--cal-text);
+  letter-spacing: -0.01em;
+}
+.testo .data {
+  font-weight: 800;
+  font-size: 13.5px;
+  line-height: 1.2;
+  color: #23262B;
+  letter-spacing: -0.015em;
+}
+.nota {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--soft);
+}
+
+/* Griglia a 7 colonne centrata: ariosa ma compatibile con ~240px */
+.griglia {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, var(--d)));
+  justify-content: center;
+  width: 100%;
+  gap: var(--gap);
+  margin-top: 12px;
+}
+.griglia.flusso {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.gg {
+  display: flex;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--soft);
+  user-select: none;
+}
+
+/* Pallini in vetro opaco fisico 3D */
+.dot {
+  width: 100%;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 30% 28%,
+      rgba(255, 255, 255, 0.45) 0%,
+      transparent 48%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--c) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--c) 96%, transparent) 60%,
+      color-mix(in srgb, var(--c) 82%, #000000) 100%
+    );
+  border: 1px solid color-mix(in srgb, var(--c) 65%, rgba(255, 255, 255, 0.5));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow:
+    0 2px 5px color-mix(in srgb, var(--c) 35%, rgba(0, 0, 0, 0.22)),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.25);
+}
+.flusso .dot {
+  width: var(--d);
+  flex: none;
+}
+
+/* Giorni passati: pallini fisici pieni in vetro opaco ma scoloriti / spenti */
+.dot.passato {
+  opacity: .92;
+  background:
+    radial-gradient(
+      circle at 32% 30%,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 52%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--c) 18%, color-mix(in srgb, var(--text) 24%, #8E8E93)) 0%,
+      color-mix(in srgb, var(--c) 18%, color-mix(in srgb, var(--text) 30%, #7A7A7A)) 65%,
+      color-mix(in srgb, var(--c) 15%, color-mix(in srgb, var(--text) 38%, #636366)) 100%
+    );
+  border: 1px solid color-mix(in srgb, var(--text) 22%, rgba(122, 122, 122, 0.42));
+  filter: saturate(0.2) brightness(0.92);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.14),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.2),
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.22);
+}
+
+/* Giorni futuri: anello/incavo in vetro traslucido */
+.dot.futuro {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--c) 14%, rgba(255, 255, 255, 0.18)) 0%,
+    color-mix(in srgb, var(--c) 6%, transparent) 100%
+  );
+  border: 2px solid color-mix(in srgb, var(--c) 78%, rgba(255, 255, 255, 0.35));
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    inset 0 1.5px 2.5px rgba(0, 0, 0, 0.18),
+    inset 0 -1px 1.5px rgba(255, 255, 255, 0.35);
+}
+
+/* Giorno corrente: gemma in vetro vivida con outline pulsante */
+.dot.oggi {
+  outline: 2px solid var(--c);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--c) 55%, transparent),
+    0 2px 5px rgba(0, 0, 0, 0.25),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+    inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.25);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+/* Giorno dell'esame: rombo smussato in vetro 3D (distinguibile per forma) */
+.dot.esame {
+  border-radius: 3px;
+  transform: rotate(45deg) scale(.78);
+  box-shadow:
+    0 2px 6px color-mix(in srgb, var(--c) 42%, rgba(0, 0, 0, 0.26)),
+    inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.6),
+    inset -1.5px -1.5px 2.5px rgba(0, 0, 0, 0.28);
+}
+
+@keyframes pulse {
+  0%, 100% { outline-color: var(--c); }
+  50% { outline-color: color-mix(in srgb, var(--c) 35%, transparent); }
+}
+
+/* Colonna 2 (Destra): Indicatore Circolare ad Arco Glassmorph (.ruota-giorni) */
+.ruota-giorni {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: stretch;
+  position: relative;
+  width: clamp(88px, 30vw, 116px);
+  min-height: 142px;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.28))
+    drop-shadow(0 1px 3px color-mix(in srgb, var(--c) 35%, rgba(0, 0, 0, 0.2)));
+}
+
+/* Linea circolare sottile in vetro sull'emisfero destro */
+.ruota-arco {
+  position: absolute;
+  top: 50%;
+  left: calc(-1.38 * var(--arc-r));
+  width: calc(2 * var(--arc-r));
+  height: calc(2 * var(--arc-r));
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.8px solid color-mix(in srgb, var(--c) 42%, rgba(255, 255, 255, 0.68));
+  box-shadow:
+    inset -1px 0 2px rgba(255, 255, 255, 0.55),
+    0 0 6px color-mix(in srgb, var(--c) 28%, transparent);
+  -webkit-mask-image: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    transparent 20deg,
+    #000 44deg,
+    #000 136deg,
+    transparent 160deg,
+    transparent 360deg
+  );
+  mask-image: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    transparent 20deg,
+    #000 44deg,
+    #000 136deg,
+    transparent 160deg,
+    transparent 360deg
+  );
+}
+
+/* Raggio posizionato sul centro esatto della circonferenza */
+.ruota-item {
+  position: absolute;
+  top: 50%;
+  left: calc(-0.38 * var(--arc-r));
+  width: 0;
+  height: 0;
+  transform: rotate(var(--ang)) translateX(var(--arc-r));
+}
+
+/* Pallini lungo la linea circolare */
+.ruota-nodo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle at 35% 35%,
+    rgba(255, 255, 255, 0.9),
+    color-mix(in srgb, var(--c) 48%, rgba(255, 255, 255, 0.45))
+  );
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.ruota-item.dist-1 .ruota-nodo {
+  opacity: 0.58;
+}
+.ruota-item.dist-2 .ruota-nodo {
+  width: 4px;
+  height: 4px;
+  opacity: 0.32;
+}
+.ruota-item.corrente .ruota-nodo {
+  width: 7.5px;
+  height: 7.5px;
+  background:
+    radial-gradient(circle at 30% 30%, #FFFFFF 0%, transparent 55%),
+    linear-gradient(135deg, color-mix(in srgb, var(--c) 85%, #FFFFFF), var(--c));
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--c) 70%, rgba(255, 255, 255, 0.5)),
+    0 1.5px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Numeri dei 2 giorni precedenti e 2 successivi lungo la curva */
+.ruota-num-adj {
+  position: absolute;
+  left: 10px;
+  top: 0;
+  transform: translateY(-50%);
+  font-size: clamp(13px, 3.2vw, 16px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-shadow:
+    0 1px 2px var(--glass-shadow),
+    0 0 1px rgba(255, 255, 255, 0.3);
+}
+.ruota-item.dist-1 .ruota-num-adj {
+  opacity: 0.38;
+}
+.ruota-item.dist-2 .ruota-num-adj {
+  opacity: 0.18;
+  font-size: clamp(12px, 2.9vw, 14.5px);
+}
+
+/* Focus centrale sul giorno corrente (0deg) libero e indentato a sinistra */
+.giorno-focus {
+  position: absolute;
+  left: 10px;
+  top: 0;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2px 0;
+}
+.giorno-focus-num {
+  font-size: clamp(22px, 4.8vw, 30px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.22),
+    0 0 2px rgba(255, 255, 255, 0.4);
+}
+.giorno-focus-mese {
+  margin-top: 2px;
+  font-size: clamp(8.5px, 1.8vw, 10px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--soft);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Scheletro di caricamento (stessa struttura del contenuto, niente salti) */
+.sk {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--text) 18%, rgba(255, 255, 255, 0.2)),
+    color-mix(in srgb, var(--text) 10%, transparent)
+  );
+  border: 0;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  animation: sk 1.6s ease-in-out infinite;
+}
+.sk-titolo { font-size: 15px; height: 1.3em; width: 45%; border-radius: 4px; }
+.sk-testo { font-size: 13px; height: 44px; width: 136px; margin: 6px 0 0; border-radius: 14px; }
+.ruota-sk .giorno-focus {
+  width: 38px;
+  height: 32px;
+}
+@keyframes sk { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+/* Calibrazione per larghezze strette (~240px) senza alcun overflow o scroll */
+@media (max-width: 265px) {
+  :root {
+    --arc-r: 58px;
+    --gap: max(5px, calc(var(--d) * .42));
+  }
+  .box {
+    padding: 9px 6px;
+    column-gap: 6px;
+  }
+  .testo {
+    padding: 11px 10px 6px;
+  }
+  .testo .principale {
+    font-size: 11px;
+  }
+  .testo .data {
+    font-size: 12px;
+  }
+  .griglia {
+    max-width: 128px;
+    margin-top: 9px;
+  }
+  .ruota-giorni {
+    width: 78px;
+    min-height: 118px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot.oggi, .sk { animation: none; }
+}
+</style>
+</head>
+<body>
+<div id="box" class="box neutro" role="group" aria-label="Caricamento in corso" aria-busy="true"></div>
+<script>
+"use strict";
+(function () {
+
+/* LOGIC-START */
+const MS_DAY = 86400000;
+const parseISO = s => { const [y,m,d] = s.split("-").map(Number); return Date.UTC(y, m-1, d); };
+const formatISO = ms => new Date(ms).toISOString().slice(0, 10);
+const LETTERE = ["L", "M", "M", "G", "V", "S", "D"];
+// Date in UTC: i ms sono sempre mezzanotte UTC del giorno locale
+const FMT_DATA = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+const FMT_LUNGA = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+// Palette Notion: [chiaro, scuro]
+const PALETTE = {
+  default: ["#6B6A66", "#A8A8A8"], gray: ["#787774", "#9B9B9B"],
+  brown: ["#9F6B53", "#BA856F"], orange: ["#D9730D", "#C77D48"],
+  yellow: ["#CB912F", "#CA9849"], green: ["#448361", "#529E72"],
+  blue: ["#337EA9", "#5E87C9"], purple: ["#9065B0", "#9D68D3"],
+  pink: ["#C14C8A", "#D15796"], red: ["#D44C47", "#DF5452"]
+};
+
+// "YYYY-MM-DD" valida (anche come data reale) oppure null
+function normalizzaISO(s) {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  return formatISO(parseISO(s)) === s ? s : null;
+}
+// oggi = ms UTC della mezzanotte del giorno locale; 0 = lunedì ... 6 = domenica
+function indiceSettimana(oggi) { return (new Date(oggi).getUTCDay() + 6) % 7; }
+function giorniMancanti(oggi, esame) { return Math.round((parseISO(esame) - oggi) / MS_DAY); }
+function scegliModalita(v) { return v === "week" ? "week" : "exam"; }
+function scegliRaggruppamento(totGiorni) { return totGiorni > 100 ? "settimane" : "giorni"; }
+function scegliColore(nome, scuro) {
+  const k = typeof nome === "string" ? nome.trim().toLowerCase() : "";
+  const coppia = Object.prototype.hasOwnProperty.call(PALETTE, k) ? PALETTE[k] : PALETTE.default;
+  return scuro ? coppia[1] : coppia[0];
+}
+function msAllaMezzanotte(adesso) { // adesso = ms epoch; prossima mezzanotte locale + 1 s
+  const n = new Date(adesso);
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 1).getTime() - adesso;
+}
+
+function leggiParametri(search) {
+  const p = new URLSearchParams(search);
+  const txt = k => { const v = (p.get(k) || "").trim(); return v === "" ? null : v; };
+  const sizeRaw = (p.get("size") || "").trim();
+  const sz = sizeRaw === "" ? NaN : Number(sizeRaw);
+  return {
+    m: txt("m") || "",
+    mode: scegliModalita(p.get("mode")),
+    size: Number.isFinite(sz) && sz > 0 ? sz : 14,
+    label: p.get("label") !== "0",
+    solid: p.get("bg") === "solid",
+    name: txt("name"),
+    hasExam: p.has("exam"),
+    exam: normalizzaISO((p.get("exam") || "").trim()),
+    start: normalizzaISO((p.get("start") || "").trim()),
+    color: txt("color")
+  };
+}
+function rispostaValida(d) { return !!d && typeof d === "object" && typeof d.nome === "string"; }
+// Gli override presenti hanno la precedenza sui campi ricevuti
+function unisciDati(r, cfg) {
+  r = r || {};
+  return {
+    nome: cfg.name || (typeof r.nome === "string" ? r.nome : ""),
+    esame: cfg.hasExam ? cfg.exam : normalizzaISO(r.esame),
+    inizio: cfg.start || normalizzaISO(r.inizio),
+    colore: cfg.color || (typeof r.colore === "string" && r.colore) || "default"
+  };
+}
+
+function titoloGiorno(ms, stato, isOggi) {
+  const tag = [];
+  if (isOggi) tag.push("oggi");
+  if (stato === "esame") tag.push("esame");
+  return FMT_LUNGA.format(ms) + (tag.length ? " (" + tag.join(", ") + ")" : "");
+}
+function titoloSettimana(lun, stato, corrente) {
+  const tag = [];
+  if (corrente) tag.push("settimana corrente");
+  if (stato === "esame") tag.push("settimana dell'esame");
+  return "Settimana dal " + FMT_DATA.format(lun) + " al " + FMT_DATA.format(lun + 6 * MS_DAY) +
+    (tag.length ? " (" + tag.join(", ") + ")" : "");
+}
+
+// Pallini della modalità esame. Ritorna { gruppo, offset, items:[{ms, stato, oggi, titolo}] }
+// stato: passato | oggi | futuro | esame (l'ultimo); oggi:true marca anche l'esame se cade oggi
+function costruisciPallini(oggi, esame, inizio) {
+  const eStr = normalizzaISO(esame);
+  if (eStr === null) return { gruppo: "giorni", offset: 0, items: [] };
+  const e = parseISO(eStr);
+  const iStr = normalizzaISO(inizio);
+  const iMs = iStr !== null ? parseISO(iStr) : null;
+  // Senza inizio (o inizio dopo l'esame): da oggi a esame; se l'esame è passato, solo il rombo
+  const s = (iMs !== null && iMs <= e) ? iMs : Math.min(oggi, e);
+  const tot = Math.round((e - s) / MS_DAY) + 1;
+  const items = [];
+  if (scegliRaggruppamento(tot) === "settimane") {
+    const lun0 = s - indiceSettimana(s) * MS_DAY;
+    const lunE = e - indiceSettimana(e) * MS_DAY;
+    for (let l = lun0; l <= lunE; l += 7 * MS_DAY) {
+      const fine = l + 6 * MS_DAY;
+      const corrente = oggi >= l && oggi <= fine;
+      let stato = fine < oggi ? "passato" : corrente ? "oggi" : "futuro";
+      if (l === lunE) stato = "esame";
+      items.push({ ms: l, stato, oggi: corrente, titolo: titoloSettimana(l, stato, corrente) });
+    }
+    return { gruppo: "settimane", offset: 0, items };
+  }
+  for (let t = s; t <= e; t += MS_DAY) {
+    let stato = t < oggi ? "passato" : t === oggi ? "oggi" : "futuro";
+    if (t === e) stato = "esame";
+    items.push({ ms: t, stato, oggi: t === oggi, titolo: titoloGiorno(t, stato, t === oggi) });
+  }
+  return { gruppo: "giorni", offset: indiceSettimana(s), items };
+}
+
+// Settimana corrente lunedì-domenica (modalità week)
+function costruisciSettimana(oggi) {
+  const lun = oggi - indiceSettimana(oggi) * MS_DAY;
+  const items = [];
+  for (let i = 0; i < 7; i++) {
+    const t = lun + i * MS_DAY;
+    const stato = t < oggi ? "passato" : t === oggi ? "oggi" : "futuro";
+    items.push({ ms: t, stato, oggi: t === oggi, titolo: titoloGiorno(t, stato, t === oggi) });
+  }
+  return { gruppo: "giorni", offset: 0, items };
+}
+
+// Testo del conto alla rovescia: { principale, data }
+function testoConto(oggi, esame) {
+  const e = normalizzaISO(esame);
+  if (e === null) return { principale: "Data esame non impostata", data: "" };
+  const n = giorniMancanti(oggi, e);
+  const data = FMT_DATA.format(parseISO(e));
+  if (n < 0) return { principale: "Esame sostenuto", data };
+  if (n === 0) return { principale: "Oggi è l'esame", data };
+  if (n === 1) return { principale: "Domani è l'esame", data };
+  return { principale: "Mancano " + n + " giorni", data };
+}
+function testoSettimana(oggi) { return "Giorno " + (indiceSettimana(oggi) + 1) + " di 7"; }
+
+function etichettaAria(nome, oggi, esame) {
+  const pre = (nome || "Materia") + ": ";
+  const e = normalizzaISO(esame);
+  if (e === null) return pre + "data esame non impostata";
+  const n = giorniMancanti(oggi, e);
+  const data = FMT_DATA.format(parseISO(e));
+  if (n < 0) return pre + "esame sostenuto il " + data;
+  if (n === 0) return pre + "oggi è l'esame del " + data;
+  if (n === 1) return pre + "domani è l'esame del " + data;
+  return pre + "mancano " + n + " giorni all'esame del " + data;
+}
+function etichettaSettimana(nome, oggi) {
+  return (nome || "Materia") + ": " + testoSettimana(oggi).toLowerCase() + " della settimana";
+}
+/* LOGIC-END */
+
+// ---------- Stato, orologio, storage ----------
+const cfg = leggiParametri(location.search);
+const box = document.getElementById("box");
+const radice = document.documentElement;
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+const st = { fase: "caricamento", grezzo: null, nota: false, giorno: 0, seq: 0, timer: null };
+const MESI_BREVI = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DEC"];
+
+const oggiUTC = () => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); };
+const chiave = () => "widget-materia:" + cfg.m;
+
+function leggiSalvato() {
+  try {
+    const t = localStorage.getItem(chiave());
+    if (!t) return null;
+    const d = JSON.parse(t);
+    return rispostaValida(d) ? d : null;
+  } catch (e) { return null; } // storage bloccato nell'iframe
+}
+function salva(d) {
+  try { localStorage.setItem(chiave(), JSON.stringify(d)); } catch (e) { /* ignora */ }
+}
+
+// ---------- Dati ----------
+// Sorgenti, in ordine: 1) file statico data/<slug>.json (GitHub Pages, relativo alla pagina);
+// 2) backend locale /api/materia (server.py).
+async function leggiDati(slug, segnale) {
+  const sorgenti = ["data/" + encodeURIComponent(slug) + ".json", "/api/materia?m=" + encodeURIComponent(slug)];
+  let ultimo = new Error("nessuna sorgente");
+  for (const u of sorgenti) {
+    try {
+      const r = await fetch(u, { cache: "no-cache", signal: segnale });
+      if (!r.ok) throw new Error("http");
+      const d = await r.json();
+      if (!rispostaValida(d)) throw new Error("formato");
+      return d;
+    } catch (e) { ultimo = e; }
+  }
+  throw ultimo;
+}
+// Dati generati da piu' di 48 ore (es. Action ferma): il widget lo segnala con la nota "dati non aggiornati".
+function datiVecchi(d) {
+  const t = typeof d.aggiornato === "string" ? Date.parse(d.aggiornato) : NaN;
+  return Number.isFinite(t) && Date.now() - t > 48 * 3600 * 1000;
+}
+async function carica() {
+  const mio = ++st.seq; // ignora risposte superate da un caricamento più recente
+  st.giorno = oggiUTC();
+  if (cfg.hasExam) { // override: nessuna chiamata al backend
+    st.grezzo = null; st.nota = false; st.fase = "ok";
+    disegna();
+    return;
+  }
+  if (!cfg.m) { st.fase = "errore"; disegna(); return; }
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const d = await leggiDati(cfg.m, ctrl.signal);
+    salva(d);
+    if (mio !== st.seq) return;
+    st.grezzo = d; st.nota = d.stale === true || datiVecchi(d); st.fase = "ok";
+  } catch (e) {
+    if (mio !== st.seq) return;
+    const s = st.grezzo || leggiSalvato();
+    if (s) { st.grezzo = s; st.nota = true; st.fase = "ok"; }
+    else st.fase = "errore";
+  } finally {
+    clearTimeout(to);
+  }
+  disegna();
+}
+
+// ---------- Rendering ----------
+function el(tag, cls, testo) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (testo != null) e.textContent = testo;
+  return e;
+}
+function nascosto(e) { e.setAttribute("aria-hidden", "true"); return e; }
+
+function applicaColore(nome) {
+  // Esadecimale (#RRGGBB) usato così com'è; altrimenti nome colore Notion con coppia chiaro/scuro
+  const raw = typeof nome === "string" ? nome.trim() : "";
+  const hex = /^#[0-9a-fA-F]{6}$/.test(raw) ? raw : null;
+  const col = hex || scegliColore(nome, mq.matches);
+  radice.style.setProperty("--c", col);
+
+  // Regola dinamica calendario: rosso di default, blu se il colore della materia è rosso
+  let isRosso = raw.toLowerCase() === "red" || /^#(d44c47|df5452)$/i.test(col);
+  if (!isRosso && hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    isRosso = r >= 170 && r > g * 1.6 && r > b * 1.6;
+  }
+  radice.style.setProperty("--cal-start", isRosso ? "#2B99FF" : "#FF6B00");
+  radice.style.setProperty("--cal-end", isRosso ? "#0051E6" : "#E61919");
+  radice.style.setProperty("--cal-text", isRosso ? "#0047CC" : "#D91B1B");
+}
+
+function pallino(p) {
+  const d = el("div", "dot " + p.stato + (p.oggi && p.stato !== "oggi" ? " oggi" : ""));
+  d.title = p.titolo;
+  return d;
+}
+function griglia(piano) {
+  const flusso = piano.gruppo === "settimane";
+  const g = el("div", flusso ? "griglia flusso" : "griglia");
+  if (!flusso) {
+    LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
+    for (let i = 0; i < piano.offset; i++) g.append(nascosto(el("div", "vuoto")));
+  }
+  piano.items.forEach(p => g.append(pallino(p)));
+  return g;
+}
+function testo(t) {
+  const p = el("p", "testo");
+  const principaleFormattato = typeof t.principale === "string"
+    ? t.principale.replace(/^Mancano (\d+) giorni$/i, "$1 giorni rimanenti")
+    : t.principale;
+  p.append(el("span", "principale", principaleFormattato));
+  if (t.data) p.append(el("span", "data", t.data));
+  return p;
+}
+
+function ruotaGiorni(oggi) {
+  const wrap = nascosto(el("div", "ruota-giorni"));
+  wrap.append(el("div", "ruota-arco"));
+  const angoli = [-46, -23, 0, 23, 46];
+  for (let i = 0; i < angoli.length; i++) {
+    const offset = i - 2;
+    const d = new Date(oggi + offset * MS_DAY);
+    const gg = String(d.getUTCDate()).padStart(2, "0");
+    const dist = Math.abs(offset);
+    const item = el("div", "ruota-item " + (dist === 0 ? "corrente" : "dist-" + dist));
+    item.style.setProperty("--ang", angoli[i] + "deg");
+    item.append(el("span", "ruota-nodo"));
+    if (offset === 0) {
+      const focus = el("div", "giorno-focus");
+      const meseAnno = MESI_BREVI[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(-2);
+      focus.append(
+        el("span", "giorno-focus-num", gg),
+        el("span", "giorno-focus-mese", meseAnno)
+      );
+      item.append(focus);
+    } else {
+      item.append(el("span", "ruota-num-adj", gg));
+    }
+    wrap.append(item);
+  }
+  return wrap;
+}
+
+function scheletro() {
+  box.className = "box neutro";
+  box.setAttribute("aria-busy", "true");
+  box.setAttribute("aria-label", "Caricamento in corso");
+  box.append(el("div", "sk sk-titolo"));
+  if (cfg.label) box.append(el("div", "sk sk-testo"));
+  const g = el("div", "griglia");
+  for (let i = 0; i < 7; i++) g.append(el("div", "gg", "\u00a0"));
+  for (let i = 0; i < (cfg.mode === "week" ? 7 : 14); i++) g.append(el("div", "dot sk"));
+  box.append(g);
+  const rSk = nascosto(el("div", "ruota-giorni ruota-sk"));
+  rSk.append(el("div", "ruota-arco"));
+  const item0 = el("div", "ruota-item corrente");
+  item0.style.setProperty("--ang", "0deg");
+  item0.append(el("span", "ruota-nodo"), el("div", "giorno-focus sk"));
+  rSk.append(item0);
+  box.append(rSk);
+}
+function errore() {
+  box.className = "box neutro";
+  box.setAttribute("aria-label", "Impossibile caricare i dati");
+  box.append(el("div", "testo", "Impossibile caricare i dati"));
+}
+
+function disegna() {
+  box.replaceChildren();
+  box.removeAttribute("aria-busy");
+  document.body.classList.toggle("solid", cfg.solid);
+  applicaColore("default");
+  if (st.fase === "caricamento") return scheletro();
+  if (st.fase === "errore") return errore();
+
+  const oggi = oggiUTC();
+  const d = unisciDati(st.grezzo, cfg);
+  applicaColore(d.colore);
+  box.className = "box";
+  if (d.nome) box.append(el("div", "titolo", d.nome));
+
+  if (cfg.mode === "week") {
+    box.setAttribute("aria-label", etichettaSettimana(d.nome, oggi));
+    if (cfg.label) box.append(testo({ principale: testoSettimana(oggi), data: "" }));
+    box.append(griglia(costruisciSettimana(oggi)));
+  } else {
+    box.setAttribute("aria-label", etichettaAria(d.nome, oggi, d.esame));
+    const t = testoConto(oggi, d.esame);
+    if (cfg.label || d.esame === null) box.append(testo(t)); // "Data esame non impostata" resta sempre
+    const piano = costruisciPallini(oggi, d.esame, d.inizio);
+    if (piano.items.length) box.append(griglia(piano));
+  }
+  box.append(ruotaGiorni(oggi));
+  if (st.nota) box.append(el("p", "nota", "dati non aggiornati"));
+}
+
+// ---------- Timer e avvio ----------
+function pianifica() {
+  clearTimeout(st.timer);
+  st.timer = setTimeout(() => { carica(); pianifica(); }, msAllaMezzanotte(Date.now()));
+}
+
+radice.style.setProperty("--d", "clamp(8px, " + cfg.size + "px, 28px)");
+disegna(); // scheletro
+carica();
+pianifica();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  pianifica(); // i timer possono slittare quando la pagina è in background
+  if (st.giorno !== oggiUTC()) carica(); else disegna();
+});
+if (mq.addEventListener) mq.addEventListener("change", disegna);
+else if (mq.addListener) mq.addListener(disegna);
+
+})();
+</script>
+</body>
+</html>
