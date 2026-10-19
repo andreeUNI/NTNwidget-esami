@@ -33,7 +33,8 @@
   }
   body.solid { background: #191919; }
 }
-html, body { background: transparent; margin: 0; }
+/* Altezza piena: il box può riempire tutto l'iframe dell'embed */
+html, body { background: transparent; margin: 0; height: 100%; }
 body.solid { background: #FFFFFF; }
 /* Tema scuro: dopo le regole chiare, altrimenti body.solid ritornerebbe bianco */
 @media (prefers-color-scheme: dark) {
@@ -54,11 +55,16 @@ body {
 /* Contenitore principale Glassmorphism 3D con layout affiancato centrato */
 .box {
   width: 100%;
+  /* Riempie tutta l'altezza dell'embed (nessun vuoto sotto); mai più basso del contenuto */
+  min-height: 100%;
   box-sizing: border-box;
-  padding: 12px;
+  /* Spazio sopra e sotto proporzionale all'altezza dell'embed (minimo 12px come prima) */
+  padding: clamp(12px, 6vh, 40px) 12px;
   display: grid;
   grid-template-columns: auto auto;
   align-items: center;
+  /* Le righe restano compatte e il blocco di contenuto è centrato in verticale */
+  align-content: center;
   justify-content: center;
   justify-items: center;
   column-gap: clamp(8px, 3vw, 18px);
@@ -518,7 +524,7 @@ body {
     --gap: max(5px, calc(var(--d) * .42));
   }
   .box {
-    padding: 9px 6px;
+    padding: clamp(9px, 5vh, 32px) 6px;
     column-gap: 6px;
   }
   .testo {
