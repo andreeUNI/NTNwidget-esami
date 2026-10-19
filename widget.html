@@ -517,6 +517,12 @@ body {
 }
 @keyframes sk { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
+/* Zoom opzionale (?zoom=1.4): --z viene impostata dal JS; senza parametro vale 1 e non cambia nulla.
+   Scala i contenuti del box (non il box stesso), così lo sfondo continua a riempire l'embed. */
+.box > * {
+  zoom: var(--z, 1);
+}
+
 /* Calibrazione per larghezze strette (~240px) senza alcun overflow o scroll */
 @media (max-width: 265px) {
   :root {
@@ -925,6 +931,9 @@ function pianifica() {
 }
 
 radice.style.setProperty("--d", "clamp(8px, " + cfg.size + "px, 28px)");
+// Zoom opzionale (?zoom=1.4): valori non validi o assenti = 1; limitato tra 0.5 e 3
+const zoomRaw = Number((new URLSearchParams(location.search).get("zoom") || "").replace(",", "."));
+radice.style.setProperty("--z", String(Number.isFinite(zoomRaw) && zoomRaw > 0 ? Math.min(Math.max(zoomRaw, 0.5), 3) : 1));
 disegna(); // scheletro
 carica();
 pianifica();
