@@ -341,6 +341,176 @@ body {
   50% { outline-color: color-mix(in srgb, var(--c) 35%, transparent); }
 }
 
+/* ===== Parte 2: appelli (rombi selezionabili) e itinere (triangoli) ===== */
+
+/* Rombo di un appello selezionabile: cliccabile, con area di tocco ~24px.
+   L'area è uno pseudo-elemento controruotato (resta un quadrato allineato allo schermo) e
+   compensa la scala .78 del rombo; è limitata così da non invadere i pallini vicini. */
+.dot.esame[role="button"] {
+  position: relative;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.dot.esame[role="button"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(min(24px, var(--d) + 2 * var(--gap) - 2px) / .78);
+  height: calc(min(24px, var(--d) + 2 * var(--gap) - 2px) / .78);
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* Appello selezionato: rombo vivido con alone */
+.dot.esame.sel {
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--c) 65%, transparent),
+    0 2px 6px color-mix(in srgb, var(--c) 42%, rgba(0, 0, 0, 0.26)),
+    inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.65),
+    inset -1.5px -1.5px 2.5px rgba(0, 0, 0, 0.28);
+}
+/* Appello non selezionato: spento (opaco, meno saturo, senza alone, bordo tratteggiato), sempre un rombo */
+.dot.esame.spento {
+  opacity: .4;
+  filter: saturate(.45);
+  border: 1px dashed color-mix(in srgb, var(--c) 75%, transparent);
+  box-shadow: none;
+}
+.dot.esame.spento.oggi {
+  opacity: .7; /* l'anello "oggi" deve restare leggibile */
+}
+
+/* Focus da tastiera: anello doppio nel colore del testo, diverso dall'anello pulsante (colorato) di .oggi */
+.dot[role="button"]:focus-visible,
+.pillola:focus-visible {
+  outline: 3px double var(--text);
+  outline-offset: 3px;
+  animation: none;
+}
+
+/* Itinere: sagoma TRIANGOLARE (vertice in alto, angoli smussati) con clip-path.
+   clip-path taglierebbe border e box-shadow dello stesso elemento: il bordo è uno pseudo-elemento
+   (::before) e l'ombra un drop-shadow sull'elemento. L'anello .oggi (outline) resta sull'elemento. */
+.dot.itinere,
+.dot.itinere.passato,
+.dot.itinere.oggi {
+  position: relative;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  filter: drop-shadow(0 1.5px 1.5px color-mix(in srgb, var(--c) 40%, rgba(0, 0, 0, 0.3)));
+}
+.dot.itinere::before,
+.dot.itinere::after {
+  content: "";
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  clip-path: polygon(46.8% 9.2%, 53.2% 9.2%, 94.8% 88.8%, 91% 95%, 9% 95%, 5.2% 88.8%);
+}
+.dot.itinere::before {
+  inset: 0;
+  background: color-mix(in srgb, var(--c) 65%, rgba(255, 255, 255, 0.5));
+}
+.dot.itinere::after {
+  inset: 1px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 55%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--c) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--c) 96%, transparent) 60%,
+      color-mix(in srgb, var(--c) 82%, #000000) 100%
+    );
+}
+/* Itinere passato: stessa attenuazione di .passato, sagoma conservata */
+.dot.itinere.passato {
+  opacity: .92;
+  filter: saturate(0.2) brightness(0.92) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.2));
+}
+.dot.itinere.passato::before {
+  background: color-mix(in srgb, var(--text) 22%, rgba(122, 122, 122, 0.42));
+}
+.dot.itinere.passato::after {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 55%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--c) 18%, color-mix(in srgb, var(--text) 24%, #8E8E93)) 0%,
+      color-mix(in srgb, var(--c) 18%, color-mix(in srgb, var(--text) 30%, #7A7A7A)) 65%,
+      color-mix(in srgb, var(--c) 15%, color-mix(in srgb, var(--text) 38%, #636366)) 100%
+    );
+}
+
+/* Dicitura "al 1° appello" nel riquadro calendario (fondo sempre chiaro: testo scuro fisso, come .principale/.data) */
+.testo .appello {
+  font-weight: 700;
+  font-size: 10.5px;
+  line-height: 1.2;
+  color: #4B5059;
+}
+
+/* Pillole di scelta dell'appello (colonna 1, sotto .testo): bersagli di tocco più comodi dei rombi */
+.appelli {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 100%;
+  margin-top: 8px;
+}
+.pillola {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  box-sizing: border-box;
+  padding: 3px 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--c) 70%, transparent);
+  border-radius: 999px;
+  opacity: .65;
+  touch-action: manipulation;
+}
+/* Mini-rombo: vuoto se non selezionata, pieno se selezionata (la differenza non dipende dal colore) */
+.pillola::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 6px;
+  height: 6px;
+  border-radius: 1.5px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+.pillola.sel {
+  opacity: 1;
+  background: color-mix(in srgb, var(--c) 38%, transparent);
+  border: 1px solid var(--c);
+}
+.pillola.sel::before {
+  background: currentColor;
+}
+
+/* Con le pillole la colonna 1 ha 3 righe: la ruota dei giorni le copre tutte */
+.box.con-appelli .ruota-giorni {
+  grid-row: 1 / span 3;
+}
+
 /* Colonna 2 (Destra): Indicatore Circolare ad Arco Glassmorph (.ruota-giorni) */
 .ruota-giorni {
   grid-column: 2;
@@ -555,6 +725,77 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .dot.oggi, .sk { animation: none; }
 }
+
+/* Parte 2: pillole e dicitura più compatte a ~240px (le pillole vanno a capo se serve) */
+@media (max-width: 265px) {
+  .appelli {
+    gap: 3px;
+    margin-top: 6px;
+  }
+  .pillola {
+    padding: 3px 6px;
+    gap: 4px;
+    font-size: 10.5px;
+  }
+  .testo .appello {
+    font-size: 10px;
+  }
+}
+
+/* ===== Parte 3: calendari annuali (?anno=1|2|3): un mese alla volta, una colonna ===== */
+.box.anno { grid-template-columns: minmax(0, 1fr); justify-content: stretch; justify-items: stretch; row-gap: 6px; text-align: left; padding: clamp(10px, 3vh, 24px) 8px; }
+.cal-testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; font-size: 11px; color: var(--soft); }
+.cal-testa b { font-size: 13px; color: var(--text); }
+.cal-nav { display: flex; align-items: center; gap: 4px; }
+.cal-btn { -webkit-appearance: none; appearance: none; margin: 0; font: inherit; font-size: 15px; font-weight: 700; line-height: 1; min-width: 28px; min-height: 28px; box-sizing: border-box; padding: 0 8px; color: var(--text); cursor: pointer; touch-action: manipulation; background: color-mix(in srgb, var(--text) 8%, transparent); border: 1px solid color-mix(in srgb, var(--text) 28%, transparent); border-radius: 8px; }
+.cal-btn.cal-oggi { font-size: 11px; }
+.cal-btn:disabled { opacity: .35; cursor: default; }
+.cal-titolo { flex: 1; min-width: 0; text-align: center; font-size: 12px; font-weight: 700; text-transform: capitalize; }
+.cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.cal-cella { position: relative; aspect-ratio: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2px 0 3px; border-radius: 6px; font-size: 10.5px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.cal-cella[role="button"] { cursor: pointer; touch-action: manipulation; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.cal-cella.sel { outline: 2px solid var(--text); outline-offset: -2px; }
+.cal-cella:focus-visible, .cal-btn:focus-visible, .cal-titolo:focus-visible { outline: 3px double var(--text); outline-offset: 2px; }
+.cal-num { min-width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%; }
+.cal-cella.oggi .cal-num { outline: 1.5px solid var(--text); outline-offset: 0; animation: calpulse 2.4s ease-in-out infinite; }
+@keyframes calpulse { 0%, 100% { outline-color: var(--text); } 50% { outline-color: color-mix(in srgb, var(--text) 30%, transparent); } }
+.cal-mk { display: flex; justify-content: center; align-items: center; gap: 1px; height: 9px; }
+.cal-piu { position: absolute; top: 0; right: 0; font-size: 8px; font-weight: 700; color: var(--soft); }
+/* Marcatori: sagoma = tipo (rombo appello, triangolo itinere); riempimento = variante (--mf) per colori simili */
+.mk { --mf: var(--mc); display: block; flex: none; background: var(--mf); }
+.mk.t1 { --mf: color-mix(in srgb, var(--mc) 60%, #fff); }
+.mk.t2 { --mf: color-mix(in srgb, var(--mc) 60%, #000); }
+.mk.v1 { background: repeating-linear-gradient(45deg, var(--mf) 0 2px, color-mix(in srgb, var(--mf) 25%, #fff) 2px 4px); }
+.mk.v2 { background: linear-gradient(90deg, var(--mf) 50%, color-mix(in srgb, var(--mf) 25%, #fff) 50%); }
+.mk.v3 { background: radial-gradient(circle, var(--mf) 0 34%, color-mix(in srgb, var(--mf) 25%, #fff) 36%); }
+.mk-a { width: 6px; height: 6px; margin: 1.25px; border-radius: 1px; transform: rotate(45deg); }
+.mk-i { width: 9px; height: 8px; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.cal-cella.passata .mk { filter: saturate(.3); opacity: .75; }
+.cal-cella .mk.conseg { opacity: .4; }
+.cal-det { min-height: 3.9em; font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
+.cal-riga { display: flex; align-items: center; gap: 3px; }
+.cal-aiuto { color: var(--soft); }
+.cal-legbox { min-width: 0; }
+.cal-legbox.rec { border: 1px dashed color-mix(in srgb, var(--text) 38%, transparent); border-radius: 8px; padding: 4px 6px; font-size: 10px; }
+.cal-legtit { margin: 0 0 3px; font-size: 11px; font-weight: 700; }
+.cal-legbox.rec .cal-legtit { font-size: 10px; }
+.cal-leg { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 3px 8px; }
+.cal-voce { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 0 4px; align-items: start; min-width: 0; font-size: 11px; line-height: 1.2; }
+.cal-legbox.rec .cal-voce { font-size: 10px; }
+.cal-voce .mk-a { width: 8px; height: 8px; margin: 2px; }
+.cal-nome { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.cal-voce.conseg { opacity: .6; }
+.cal-voce.conseg .cal-nome { text-decoration: line-through; }
+.cal-prox { display: block; font-size: 10px; color: var(--soft); }
+.cal-vtxt { min-width: 0; }
+.cal-key { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 10px; color: var(--soft); }
+.cal-k { display: inline-flex; align-items: center; gap: 3px; }
+.cal-k .mk { --mc: var(--text); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.sk-cal { height: 28px; width: 100%; border-radius: 8px; }
+.sk-cal.grande { height: 190px; }
+@media (max-width: 265px) { .box.anno { padding: clamp(9px, 3vh, 20px) 6px; } .cal-cella { font-size: 10px; } }
+@media (prefers-reduced-motion: reduce) { .cal-cella.oggi .cal-num { animation: none; } }
 </style>
 </head>
 <body>
@@ -716,13 +957,327 @@ function etichettaSettimana(nome, oggi) {
   return (nome || "Materia") + ": " + testoSettimana(oggi).toLowerCase() + " della settimana";
 }
 /* LOGIC-END */
+/* NEWLOGIC-START */
+// Parte 2: appelli e itinere. Solo funzioni pure: nessun accesso a DOM, storage o orologio di sistema.
+// "oggi" arriva sempre come parametro (ms UTC, mezzanotte). Usano il blocco LOGIC senza modificarlo.
+const MESI_ABBR = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+
+// Le quattro date del JSON grezzo (anche vecchio, senza i campi nuovi): "YYYY-MM-DD" valide oppure null
+function elencaDate(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return { a1: normalizzaISO(r.esame), a2: normalizzaISO(r.esame2), i1: normalizzaISO(r.itinere1), i2: normalizzaISO(r.itinere2) };
+}
+// Appelli presenti, nell'ordine della numerazione data dalle proprietà (anche se esame2 < esame).
+// esame2 == esame: un unico 1° appello. Solo esame2: un unico appello numerato 2.
+function appelliDisponibili(raw) {
+  const d = elencaDate(raw);
+  const out = [];
+  if (d.a1 !== null) out.push({ n: 1, data: d.a1 });
+  if (d.a2 !== null && d.a2 !== d.a1) out.push({ n: 2, data: d.a2 });
+  return out;
+}
+// ISO dell'appello più lontano (null se non ce ne sono)
+function ultimaData(appelli) {
+  return appelli.length ? formatISO(Math.max(...appelli.map(a => parseISO(a.data)))) : null;
+}
+// La scelta salvata {n, data} vale solo se "data" coincide con la data attuale dell'appello n
+function sceltaValida(appelli, salvato) {
+  if (!salvato || typeof salvato !== "object") return false;
+  const a = appelli.find(x => x.n === salvato.n);
+  return !!a && a.data === salvato.data;
+}
+// Numero dell'appello da mostrare: scelta salvata valida; altrimenti il primo (in ordine di data) con data >= oggi;
+// se sono tutti passati, quello con data maggiore. Con un solo appello non c'è scelta.
+function scegliAppello(appelli, oggi, salvato) {
+  if (!appelli.length) return null;
+  if (appelli.length === 1) return appelli[0].n;
+  if (sceltaValida(appelli, salvato)) return salvato.n;
+  const futuri = appelli.filter(a => parseISO(a.data) >= oggi).sort((x, y) => parseISO(x.data) - parseISO(y.data));
+  if (futuri.length) return futuri[0].n;
+  return appelli.slice().sort((x, y) => parseISO(y.data) - parseISO(x.data))[0].n;
+}
+// Inizio della griglia (ISO) da passare a costruisciPallini. date = { appelli: [ISO], itinere: [ISO] }.
+// inizio valido (non dopo l'appello più lontano): min(inizio, data più vicina tra appelli e itinere);
+// altrimenti min(oggi, data più vicina). Senza appelli: null.
+function inizioEffettivo(oggi, inizio, date) {
+  const ap = ((date && date.appelli) || []).map(normalizzaISO).filter(s => s !== null);
+  if (!ap.length) return null;
+  const it = ((date && date.itinere) || []).map(normalizzaISO).filter(s => s !== null);
+  const msAp = ap.map(parseISO);
+  const dataMin = Math.min(...msAp.concat(it.map(parseISO)));
+  const dataMax = Math.max(...msAp);
+  const iStr = normalizzaISO(inizio);
+  const s = (iStr !== null && parseISO(iStr) <= dataMax) ? Math.min(parseISO(iStr), dataMin) : Math.min(oggi, dataMin);
+  return formatISO(s);
+}
+
+function etichettaAppello(n) { return n + "° appello"; }
+function etichettaPillola(n, data) {
+  const d = new Date(parseISO(data));
+  return n + "° · " + d.getUTCDate() + " " + MESI_ABBR[d.getUTCMonth()];
+}
+function etichettaAriaAppello(n, data, selezionato) {
+  return etichettaAppello(n) + ", " + FMT_DATA.format(parseISO(data)) + ", " + (selezionato ? "selezionato" : "non selezionato");
+}
+// Dicitura da inserire nel riquadro tra testo principale e data ("" = nessuna dicitura)
+function dicituraConto(principale, n) {
+  const p = typeof principale === "string" ? principale : "";
+  if (/^(Mancano \d+ giorni|\d+ giorni rimanenti)$/i.test(p)) return "al " + etichettaAppello(n);
+  if (/^(Oggi è l'esame|Domani è l'esame|Esame sostenuto)$/i.test(p)) return etichettaAppello(n);
+  return "";
+}
+
+// Eventi da annotare sulla griglia. numerati=false solo se c'è il solo 1° appello (nessuna dicitura "n° appello").
+// Un itinere dopo l'ultimo appello non viene disegnato.
+function costruisciEventi(appelli, date, selN, numerati) {
+  const ev = [];
+  appelli.forEach(a => ev.push({
+    tipo: "appello", n: a.n, ms: parseISO(a.data),
+    etichetta: numerati ? etichettaAppello(a.n) : "esame", numerato: numerati, selezionato: a.n === selN
+  }));
+  const ultimo = appelli.length ? Math.max(...appelli.map(a => parseISO(a.data))) : -Infinity;
+  [[1, date.i1], [2, date.i2]].forEach(([k, s]) => {
+    if (s !== null && parseISO(s) <= ultimo) {
+      ev.push({ tipo: "itinere", n: k, ms: parseISO(s), etichetta: "Itinere " + k, selezionato: false });
+    }
+  });
+  return ev;
+}
+// Annota le item di costruisciPallini (senza modificarle: ritorna un piano nuovo).
+// Giorni: ms == data; settimane: ms <= data < ms + 7 giorni. Priorità nella cella: appello > itinere.
+// Item annotate: stato "esame" + appello (1|2) + selezionato; oppure itinere:true (stato "itinere" se era "futuro";
+// "passato" e "oggi" restano). Sempre eventi (elenco per il title). In settimane, due appelli nella stessa settimana
+// diventano due item adiacenti (l'anello "oggi" resta sulla prima).
+function applicaEventi(piano, eventi) {
+  const sett = piano.gruppo === "settimane";
+  const inCella = (it, ev) => sett ? (ev.ms >= it.ms && ev.ms < it.ms + 7 * MS_DAY) : ev.ms === it.ms;
+  const nome = ev => (sett && ev.tipo === "appello" && !ev.numerato) ? "settimana dell'esame" : ev.etichetta;
+  const ordina = (a, b) => (a.tipo === b.tipo ? 0 : a.tipo === "appello" ? -1 : 1) || (a.ms - b.ms) || (a.n - b.n);
+  const titolo = (it, evs) => {
+    const tag = [];
+    if (it.oggi) tag.push(sett ? "settimana corrente" : "oggi");
+    tag.push(evs.map(nome).join(" · "));
+    const base = sett
+      ? "Settimana dal " + FMT_DATA.format(it.ms) + " al " + FMT_DATA.format(it.ms + 6 * MS_DAY)
+      : FMT_LUNGA.format(it.ms);
+    return base + " (" + tag.join(", ") + ")";
+  };
+  const annota = (it, evs, ap, primo) => {
+    const n = Object.assign({}, it);
+    n.eventi = evs.map(nome);
+    if (ap) { n.stato = "esame"; n.appello = ap.n; n.selezionato = ap.selezionato; }
+    else { n.itinere = true; if (it.stato === "futuro") n.stato = "itinere"; }
+    if (!primo) n.oggi = false;
+    n.titolo = titolo(n, evs);
+    return n;
+  };
+  const items = [];
+  piano.items.forEach(it => {
+    const qui = eventi.filter(ev => inCella(it, ev)).sort(ordina);
+    if (!qui.length) { items.push(it); return; }
+    const appelli = qui.filter(e => e.tipo === "appello");
+    if (appelli.length > 1) {
+      appelli.forEach((ap, i) => items.push(annota(it, [ap].concat(qui.filter(e => e !== ap)), ap, i === 0)));
+    } else {
+      items.push(annota(it, qui, appelli[0] || null, true));
+    }
+  });
+  return { gruppo: piano.gruppo, offset: piano.offset, items };
+}
+
+// Casi di test della logica pura (oggi fisso = 10 gennaio 2027). Ritorna [{ nome, ok }]; non è chiamata dal widget.
+// I casi che richiedono DOM/storage (storage bloccato, ?exam=, ?mode=week) si provano nel browser.
+function provaNewLogic() {
+  const O = parseISO("2027-01-10");
+  const out = [];
+  const prova = (nome, ok) => out.push({ nome, ok: !!ok });
+  const calcola = (raw, salvato, inizio) => {
+    const ap = appelliDisponibili(raw), date = elencaDate(raw);
+    const sel = scegliAppello(ap, O, salvato);
+    const num = ap.length > 1 || (ap.length === 1 && ap[0].n === 2);
+    const ini = inizioEffettivo(O, inizio || null, { appelli: ap.map(a => a.data), itinere: [date.i1, date.i2].filter(s => s !== null) });
+    const piano = ap.length ? applicaEventi(costruisciPallini(O, ultimaData(ap), ini), costruisciEventi(ap, date, sel, num)) : null;
+    return { ap, sel, num, piano, ini };
+  };
+  const base = p => p.items.map(i => [i.ms, i.stato, i.oggi, i.titolo].join("|")).join("#");
+  const diamanti = p => p.items.filter(i => i.appello);
+
+  // 1. solo esame: identico a oggi
+  let r = calcola({ esame: "2027-01-20" }, null, "2027-01-05");
+  prova("solo esame: nessuna numerazione e piano identico a costruisciPallini",
+    r.ap.length === 1 && !r.num && r.sel === 1 && base(r.piano) === base(costruisciPallini(O, "2027-01-20", "2027-01-05")));
+  r = calcola({ esame: "2027-01-20" }, null, null);
+  prova("solo esame senza inizio: da oggi all'esame, identico", base(r.piano) === base(costruisciPallini(O, "2027-01-20", null)));
+  r = calcola({ esame: "2027-01-20" }, null, "2027-02-01");
+  prova("solo esame, inizio dopo l'esame: ignorato come oggi", base(r.piano) === base(costruisciPallini(O, "2027-01-20", "2027-02-01")));
+  // 2. esame passato + esame2 futuro: default 2
+  r = calcola({ esame: "2027-01-05", esame2: "2027-02-02" }, null, null);
+  prova("esame passato + esame2 futuro: default 2", r.sel === 2 && r.num && r.ap.length === 2);
+  // 3. entrambi passati: quello con data maggiore
+  r = calcola({ esame: "2027-01-03", esame2: "2027-01-08" }, null, null);
+  prova("entrambi passati: default quello con data maggiore (2)", r.sel === 2);
+  r = calcola({ esame: "2027-01-08", esame2: "2027-01-03" }, null, null);
+  prova("entrambi passati con 2° prima del 1°: default quello con data maggiore (1)", r.sel === 1);
+  // 4. scelta salvata con data cambiata: ignorata
+  r = calcola({ esame: "2027-01-20", esame2: "2027-02-02" }, { n: 2, data: "2027-02-01" }, null);
+  prova("scelta salvata con data cambiata: ignorata, default automatico (1)", r.sel === 1);
+  // 5. scelta salvata valida: rispettata
+  r = calcola({ esame: "2027-01-20", esame2: "2027-02-02" }, { n: 2, data: "2027-02-02" }, null);
+  prova("scelta salvata valida: rispettata (2)", r.sel === 2 && diamanti(r.piano).filter(i => i.selezionato).length === 1);
+  prova("scelta salvata malformata (n come stringa): ignorata",
+    scegliAppello(r.ap, O, { n: "2", data: "2027-02-02" }) === 1);
+  // 6. esame2 senza esame: caso C
+  r = calcola({ esame2: "2027-02-02" }, null, null);
+  prova("solo esame2: un appello numerato 2, dicitura al 2° appello",
+    r.ap.length === 1 && r.ap[0].n === 2 && r.num && r.sel === 2 &&
+    dicituraConto("15 giorni rimanenti", 2) === "al 2° appello" && dicituraConto("Mancano 15 giorni", 2) === "al 2° appello");
+  // 7. esame2 == esame: un unico 1° appello
+  r = calcola({ esame: "2027-01-20", esame2: "2027-01-20" }, null, null);
+  prova("esame2 == esame: un solo 1° appello, non numerato", r.ap.length === 1 && r.ap[0].n === 1 && !r.num);
+  // 8. esame2 < esame: numerazione delle proprietà
+  r = calcola({ esame: "2027-02-02", esame2: "2027-01-20" }, null, null);
+  prova("esame2 < esame: numerazione mantenuta, default il primo in ordine di data (2)",
+    r.ap[0].n === 1 && r.ap[0].data === "2027-02-02" && r.ap[1].n === 2 && r.sel === 2);
+  // 9. itinere nello stesso giorno dell'appello
+  r = calcola({ esame: "2027-01-20", esame2: "2027-02-02", itinere1: "2027-01-20" }, null, null);
+  let d1 = r.piano.items.find(i => i.ms === parseISO("2027-01-20"));
+  prova("itinere nello stesso giorno dell'appello: rombo (appello > itinere) e title con entrambi",
+    d1.appello === 1 && d1.stato === "esame" && !d1.itinere && /1° appello · Itinere 1/.test(d1.titolo) && d1.eventi.length === 2);
+  // 10. itinere prima dell'inizio: estende l'inizio
+  r = calcola({ esame: "2027-01-30", itinere1: "2027-01-03" }, null, "2027-01-08");
+  prova("itinere prima dell'inizio: l'inizio si estende all'itinere", r.ini === "2027-01-03" && r.piano.items[0].ms === parseISO("2027-01-03") && r.piano.items[0].itinere === true);
+  prova("itinere passato: resta 'passato' con la sagoma (itinere:true)", r.piano.items[0].stato === "passato");
+  r = calcola({ esame: "2027-01-30", itinere1: "2027-01-15" }, null, null);
+  d1 = r.piano.items.find(i => i.itinere);
+  prova("itinere futuro: stato 'itinere'", d1 && d1.stato === "itinere" && /Itinere 1/.test(d1.titolo));
+  // 11. itinere dopo l'ultimo appello: non disegnato
+  r = calcola({ esame: "2027-01-20", itinere1: "2027-01-25" }, null, null);
+  prova("itinere dopo l'ultimo appello: non disegnato", !r.piano.items.some(i => i.itinere) && r.piano.items.length === 11);
+  // 12. oltre 100 giorni: due appelli nella stessa settimana
+  r = calcola({ esame: "2027-06-01", esame2: "2027-06-03" }, null, "2027-01-04");
+  const dm = diamanti(r.piano);
+  prova("settimane con due appelli nella stessa settimana: due item adiacenti, uno per appello",
+    r.piano.gruppo === "settimane" && dm.length === 2 && r.piano.items.indexOf(dm[1]) === r.piano.items.indexOf(dm[0]) + 1 &&
+    dm[0].appello === 1 && dm[1].appello === 2 && dm[0].ms === dm[1].ms);
+  prova("settimane: i title elencano gli eventi della settimana", /1° appello · 2° appello/.test(dm[0].titolo) && /2° appello · 1° appello/.test(dm[1].titolo));
+  r = calcola({ esame: "2027-06-01", esame2: "2027-07-20" }, null, "2027-01-04");
+  prova("settimane con appelli in settimane diverse: un rombo per ciascuna", diamanti(r.piano).length === 2);
+  r = calcola({ esame: "2027-06-01", itinere1: "2027-03-02", itinere2: "2027-03-04" }, null, "2027-01-04");
+  const tri = r.piano.items.filter(i => i.itinere);
+  prova("settimane: due itinere nella stessa settimana = un solo triangolo con title doppio",
+    tri.length === 1 && tri[0].eventi.length === 2 && /Itinere 1 · Itinere 2/.test(tri[0].titolo));
+  // 13. esame oggi
+  r = calcola({ esame: "2027-01-10", esame2: "2027-02-02" }, null, "2027-01-04");
+  d1 = r.piano.items.find(i => i.appello === 1);
+  prova("esame oggi: anello .oggi mantenuto, default 1, 'Oggi è l'esame' -> '1° appello'",
+    r.sel === 1 && d1.oggi === true && d1.stato === "esame" && dicituraConto(testoConto(O, "2027-01-10").principale, 1) === "1° appello");
+  prova("diciture: domani / sostenuto / non impostato",
+    dicituraConto("Domani è l'esame", 2) === "2° appello" && dicituraConto("Esame sostenuto", 1) === "1° appello" && dicituraConto("Data esame non impostata", 1) === "");
+  // 14. JSON vecchio senza campi nuovi
+  r = calcola({ slug: "x", nome: "X", esame: "2027-01-20", inizio: null, colore: "blue" }, null, null);
+  prova("JSON vecchio senza campi nuovi: come solo esame", r.ap.length === 1 && !r.num && elencaDate({ esame: "2027-01-20" }).i1 === null);
+  prova("raw nullo o non valido: nessun appello", appelliDisponibili(null).length === 0 && appelliDisponibili("x").length === 0 && elencaDate(undefined).a1 === null);
+  prova("date non valide (2027-02-30) trattate come assenti", appelliDisponibili({ esame: "2027-02-30", esame2: "2027-03-02" }).length === 1);
+  // 15. etichette
+  prova("etichette pillola/aria",
+    etichettaPillola(1, "2027-01-12") === "1° · 12 gen" && etichettaPillola(2, "2027-12-02") === "2° · 2 dic" &&
+    etichettaAriaAppello(2, "2027-02-02", false) === "2° appello, 2 febbraio 2027, non selezionato");
+  return out;
+}
+
+// Parte 3: calendari annuali. Mesi numerati 0-11 (come getUTCMonth). Funzioni pure, ms UTC mezzanotte.
+const MESI_LUNGHI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+// attivo = il parametro anno è presente (anche se non valido → errore); anno = 1|2|3|null
+function leggiParametriAnno(search) {
+  const p = new URLSearchParams(search);
+  const a = (p.get("anno") || "").trim(), m = (p.get("mese") || "").trim();
+  return { attivo: p.has("anno"), anno: /^[123]$/.test(a) ? Number(a) : null, mese: /^\d{4}-(0[1-9]|1[0-2])$/.test(m) ? m : null };
+}
+function annoValido(d) {
+  return !!d && typeof d === "object" && Array.isArray(d.materie) && !!d.finestra &&
+    normalizzaISO(d.finestra.da) !== null && normalizzaISO(d.finestra.a) !== null && parseISO(d.finestra.da) <= parseISO(d.finestra.a);
+}
+function mesiFinestra(da, a) {
+  const d = new Date(parseISO(da)), e = new Date(parseISO(a)), out = [];
+  let y = d.getUTCFullYear(), m = d.getUTCMonth();
+  while (y < e.getUTCFullYear() || (y === e.getUTCFullYear() && m <= e.getUTCMonth())) {
+    out.push({ anno: y, mese: m, chiave: y + "-" + String(m + 1).padStart(2, "0") });
+    if (++m > 11) { m = 0; y++; }
+  }
+  return out;
+}
+// Indice del mese da mostrare: richiesto (se nella finestra), poi il corrente, poi il primo/ultimo
+function meseIniziale(mesi, oggi, richiesto) {
+  if (!mesi.length) return -1;
+  let i = richiesto ? mesi.findIndex(x => x.chiave === richiesto) : -1;
+  if (i >= 0) return i;
+  const o = new Date(oggi), k = o.getUTCFullYear() * 12 + o.getUTCMonth();
+  i = mesi.findIndex(x => x.anno * 12 + x.mese === k);
+  if (i >= 0) return i;
+  return k < mesi[0].anno * 12 + mesi[0].mese ? 0 : mesi.length - 1;
+}
+// 42 celle (6 settimane, lunedì primo): { ms, giorno }; fuori mese { ms: null, giorno: 0 }
+function costruisciMese(anno, mese) {
+  const p = Date.UTC(anno, mese, 1), n = new Date(Date.UTC(anno, mese + 1, 0)).getUTCDate(), off = indiceSettimana(p), out = [];
+  for (let i = 0; i < 42; i++) { const g = i - off + 1; out.push(g >= 1 && g <= n ? { ms: p + (g - 1) * MS_DAY, giorno: g } : { ms: null, giorno: 0 }); }
+  return out;
+}
+// Mappa ms → eventi nella finestra (estremi inclusi); stessa materia+tipo+giorno = un solo evento
+function eventiPerGiorno(materie, da, a) {
+  const lo = parseISO(da), hi = parseISO(a), mappa = new Map();
+  (Array.isArray(materie) ? materie : []).forEach(m => {
+    if (!m || typeof m !== "object") return;
+    [["appello", 1, m.esame], ["appello", 2, m.esame2], ["itinere", 1, m.itinere1], ["itinere", 2, m.itinere2]].forEach(([tipo, n, s]) => {
+      const iso = normalizzaISO(s);
+      if (iso === null) return;
+      const ms = parseISO(iso);
+      if (ms < lo || ms > hi) return;
+      const l = mappa.get(ms) || [];
+      if (l.some(e => e.slug === m.slug && e.tipo === tipo)) return;
+      l.push({ slug: m.slug, nome: (typeof m.nome === "string" && m.nome) || String(m.slug), tipo, n, conseguita: m.conseguita === true, recupero: m.recupero === true });
+      mappa.set(ms, l);
+    });
+  });
+  return mappa;
+}
+// Prossima data utile (ISO) tra le quattro, >= oggi; null se non c'è
+function prossimaData(m, oggi) {
+  const v = [m && m.esame, m && m.esame2, m && m.itinere1, m && m.itinere2].map(normalizzaISO).filter(s => s !== null && parseISO(s) >= oggi).sort();
+  return v.length ? v[0] : null;
+}
+function risolviColore(colore, scuro) { return typeof colore === "string" && /^#[0-9a-fA-F]{6}$/.test(colore.trim()) ? colore.trim() : scegliColore(colore, scuro); }
+function distanzaColori(a, b) {
+  const c = h => { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }, x = c(a), y = c(b);
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+}
+// elenco [{slug, hex}] in ordine di visualizzazione → { slug: variante }. Conflitto: distanza < 48 (gruppi transitivi)
+function assegnaVarianti(elenco) {
+  const g = elenco.map((_, i) => i), rad = i => g[i] === i ? i : (g[i] = rad(g[i])), cont = {}, out = {};
+  for (let i = 0; i < elenco.length; i++) for (let j = i + 1; j < elenco.length; j++) {
+    if (distanzaColori(elenco[i].hex, elenco[j].hex) < 48) g[rad(j)] = rad(i);
+  }
+  elenco.forEach((e, i) => { const r = rad(i); out[e.slug] = cont[r] = cont[r] === undefined ? 0 : cont[r] + 1; });
+  return out;
+}
+function intervalloFinestra(da, a) {
+  const f = s => { const d = new Date(parseISO(s)); return MESI_ABBR[d.getUTCMonth()] + " " + d.getUTCFullYear(); };
+  return f(da) + " – " + f(a);
+}
+function dataBreve(iso) { const d = new Date(parseISO(iso)); return d.getUTCDate() + " " + MESI_ABBR[d.getUTCMonth()]; }
+function etichettaEvento(e) { return e.tipo === "appello" ? etichettaAppello(e.n) : "Itinere " + e.n; }
+function etichettaAriaGiorno(ms, lista) {
+  return FMT_DATA.format(ms) + ": " + lista.map(e => e.nome + ", " + etichettaEvento(e).toLowerCase() + (e.conseguita ? " (conseguita)" : "")).join("; ");
+}
+/* NEWLOGIC-END */
 
 // ---------- Stato, orologio, storage ----------
 const cfg = leggiParametri(location.search);
+const ca = leggiParametriAnno(location.search);
+const sa = { mese: null, sel: null, mesi: null, i: 0 }; // stato del calendario annuale (mese guardato = chiave "YYYY-MM")
 const box = document.getElementById("box");
 const radice = document.documentElement;
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
-const st = { fase: "caricamento", grezzo: null, nota: false, giorno: 0, seq: 0, timer: null };
+const st = { fase: "caricamento", grezzo: null, nota: false, giorno: 0, seq: 0, timer: null, appello: null };
 const MESI_BREVI = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DEC"];
 
 const oggiUTC = () => { const n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); };
@@ -738,6 +1293,19 @@ function leggiSalvato() {
 }
 function salva(d) {
   try { localStorage.setItem(chiave(), JSON.stringify(d)); } catch (e) { /* ignora */ }
+}
+// Scelta dell'appello: {"n":1|2,"data":"YYYY-MM-DD"}. Se lo storage è bloccato vale solo st.appello (pagina aperta).
+const chiaveAppello = () => chiave() + ":appello";
+function leggiAppelloSalvato() {
+  try {
+    const t = localStorage.getItem(chiaveAppello());
+    if (!t) return null;
+    const d = JSON.parse(t);
+    return d && typeof d === "object" ? d : null; // la validità (data coincidente) la decide scegliAppello
+  } catch (e) { return null; } // storage bloccato nell'iframe
+}
+function salvaAppello(s) {
+  try { localStorage.setItem(chiaveAppello(), JSON.stringify(s)); } catch (e) { /* ignora */ }
 }
 
 // ---------- Dati ----------
@@ -763,6 +1331,7 @@ function datiVecchi(d) {
   return Number.isFinite(t) && Date.now() - t > 48 * 3600 * 1000;
 }
 async function carica() {
+  if (ca.attivo) return caricaAnno();
   const mio = ++st.seq; // ignora risposte superate da un caricamento più recente
   st.giorno = oggiUTC();
   if (cfg.hasExam) { // override: nessuna chiamata al backend
@@ -818,29 +1387,74 @@ function applicaColore(nome) {
   radice.style.setProperty("--cal-text", isRosso ? "#0047CC" : "#D91B1B");
 }
 
-function pallino(p) {
-  const d = el("div", "dot " + p.stato + (p.oggi && p.stato !== "oggi" ? " oggi" : ""));
+// appelli: elenco [{n, data}] solo quando i rombi sono selezionabili (caso B), altrimenti null
+function pallino(p, appelli) {
+  let cl = "dot " + p.stato + (p.oggi && p.stato !== "oggi" ? " oggi" : "");
+  if (p.itinere && p.stato !== "itinere") cl += " itinere";
+  const selezionabile = !!appelli && !!p.appello;
+  if (selezionabile) cl += p.selezionato ? " sel" : " spento";
+  const d = el("div", cl);
   d.title = p.titolo;
+  if (selezionabile) {
+    const a = appelli.find(x => x.n === p.appello);
+    d.setAttribute("role", "button");
+    d.tabIndex = 0;
+    d.setAttribute("aria-pressed", String(!!p.selezionato));
+    d.setAttribute("aria-label", etichettaAriaAppello(a.n, a.data, !!p.selezionato));
+    d.dataset.n = String(a.n);
+    d.addEventListener("click", () => scegli(a, "dot", false));
+    d.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " " || ev.key === "Spacebar") { ev.preventDefault(); scegli(a, "dot", true); }
+    });
+  }
   return d;
 }
-function griglia(piano) {
+function griglia(piano, appelli) {
   const flusso = piano.gruppo === "settimane";
   const g = el("div", flusso ? "griglia flusso" : "griglia");
   if (!flusso) {
     LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
     for (let i = 0; i < piano.offset; i++) g.append(nascosto(el("div", "vuoto")));
   }
-  piano.items.forEach(p => g.append(pallino(p)));
+  piano.items.forEach(p => g.append(pallino(p, appelli)));
   return g;
 }
-function testo(t) {
+function testo(t, appello) {
   const p = el("p", "testo");
   const principaleFormattato = typeof t.principale === "string"
     ? t.principale.replace(/^Mancano (\d+) giorni$/i, "$1 giorni rimanenti")
     : t.principale;
   p.append(el("span", "principale", principaleFormattato));
+  if (appello) p.append(el("span", "appello", appello)); // solo con più appelli (o solo il 2°)
   if (t.data) p.append(el("span", "data", t.data));
   return p;
+}
+
+// Pillole "1° · 12 gen" / "2° · 2 feb": stessa selezione dei rombi, bersagli di tocco più comodi
+function pillole(appelli, selN) {
+  const g = el("div", "appelli");
+  g.setAttribute("role", "group");
+  g.setAttribute("aria-label", "Scelta dell'appello");
+  appelli.forEach(a => {
+    const sel = a.n === selN;
+    const b = el("button", "pillola" + (sel ? " sel" : ""), etichettaPillola(a.n, a.data));
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(sel));
+    b.setAttribute("aria-label", etichettaAriaAppello(a.n, a.data, sel));
+    b.dataset.n = String(a.n);
+    b.addEventListener("click", ev => scegli(a, "pillola", ev.detail === 0)); // detail 0 = da tastiera
+    g.append(b);
+  });
+  return g;
+}
+// Cambia la selezione e ridisegna tutto senza nuovo fetch; da tastiera rimette il focus sull'elemento attivato
+function scegli(a, origine, daTastiera) {
+  st.appello = { n: a.n, data: a.data };
+  salvaAppello(st.appello);
+  disegna();
+  if (!daTastiera) return;
+  const e = box.querySelector((origine === "pillola" ? ".pillola" : ".dot") + '[data-n="' + a.n + '"]');
+  if (e) e.focus();
 }
 
 function ruotaGiorni(oggi) {
@@ -900,8 +1514,9 @@ function disegna() {
   box.removeAttribute("aria-busy");
   document.body.classList.toggle("solid", cfg.solid);
   applicaColore("default");
-  if (st.fase === "caricamento") return scheletro();
+  if (st.fase === "caricamento") return ca.attivo ? scheletroAnno() : scheletro();
   if (st.fase === "errore") return errore();
+  if (ca.attivo) return disegnaAnno();
 
   const oggi = oggiUTC();
   const d = unisciDati(st.grezzo, cfg);
@@ -914,15 +1529,214 @@ function disegna() {
     if (cfg.label) box.append(testo({ principale: testoSettimana(oggi), data: "" }));
     box.append(griglia(costruisciSettimana(oggi)));
   } else {
-    box.setAttribute("aria-label", etichettaAria(d.nome, oggi, d.esame));
-    const t = testoConto(oggi, d.esame);
-    if (cfg.label || d.esame === null) box.append(testo(t)); // "Data esame non impostata" resta sempre
-    const piano = costruisciPallini(oggi, d.esame, d.inizio);
-    if (piano.items.length) box.append(griglia(piano));
+    // Appelli e itinere: con l'override ?exam= vengono ignorati (grezzo = null) e il widget resta com'è sempre stato
+    const grezzo = cfg.hasExam ? null : st.grezzo;
+    const appelli = appelliDisponibili(grezzo);
+    const selN = scegliAppello(appelli, oggi, st.appello || leggiAppelloSalvato());
+    const numerati = appelli.length > 1 || (appelli.length === 1 && appelli[0].n === 2); // false = caso A
+    const selezionabili = appelli.length === 2; // caso B
+    const esameSel = appelli.length ? appelli.find(a => a.n === selN).data : d.esame;
+
+    box.setAttribute("aria-label", etichettaAria(d.nome, oggi, esameSel) + (numerati ? ", " + etichettaAppello(selN) : ""));
+    const t = testoConto(oggi, esameSel);
+    if (cfg.label || esameSel === null) box.append(testo(t, numerati ? dicituraConto(t.principale, selN) : "")); // "Data esame non impostata" resta sempre
+    if (selezionabili && cfg.label) {
+      box.append(pillole(appelli, selN));
+      box.classList.add("con-appelli");
+    }
+    let piano;
+    if (appelli.length) {
+      const date = elencaDate(grezzo);
+      const ini = inizioEffettivo(oggi, d.inizio, { appelli: appelli.map(a => a.data), itinere: [date.i1, date.i2].filter(s => s !== null) });
+      piano = applicaEventi(costruisciPallini(oggi, ultimaData(appelli), ini), costruisciEventi(appelli, date, selN, numerati));
+    } else {
+      piano = costruisciPallini(oggi, esameSel, d.inizio);
+    }
+    if (piano.items.length) box.append(griglia(piano, selezionabili ? appelli : null));
   }
   box.append(ruotaGiorni(oggi));
   if (st.nota) box.append(el("p", "nota", "dati non aggiornati"));
 }
+
+
+// ---------- Parte 3: calendari annuali ----------
+const chiaveAnno = () => "widget-anno:" + ca.anno;
+function leggiSalvatoAnno() {
+  try { const d = JSON.parse(localStorage.getItem(chiaveAnno())); return annoValido(d) ? d : null; } catch (e) { return null; } // storage bloccato
+}
+function salvaAnno(d) {
+  try { localStorage.setItem(chiaveAnno(), JSON.stringify(d)); } catch (e) { /* ignora */ }
+}
+// Sorgenti: data/anno-N.json, poi /api/anno?n=N (può non esistere: errore gestito come per le materie)
+async function leggiDatiAnno(segnale) {
+  let ultimo = new Error("nessuna sorgente");
+  for (const u of ["data/anno-" + ca.anno + ".json", "/api/anno?n=" + ca.anno]) {
+    try {
+      const r = await fetch(u, { cache: "no-cache", signal: segnale });
+      if (!r.ok) throw new Error("http");
+      const d = await r.json();
+      if (!annoValido(d)) throw new Error("formato");
+      return d;
+    } catch (e) { ultimo = e; }
+  }
+  throw ultimo;
+}
+async function caricaAnno() {
+  const mio = ++st.seq;
+  st.giorno = oggiUTC();
+  if (!ca.anno) { st.fase = "errore"; disegna(); return; }
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), 10000);
+  try {
+    const d = await leggiDatiAnno(ctrl.signal);
+    salvaAnno(d);
+    if (mio !== st.seq) return;
+    st.grezzo = d; st.nota = d.stale === true || datiVecchi(d); st.fase = "ok";
+  } catch (e) {
+    if (mio !== st.seq) return;
+    const s = st.grezzo || leggiSalvatoAnno();
+    if (s) { st.grezzo = s; st.nota = true; st.fase = "ok"; }
+    else st.fase = "errore";
+  } finally {
+    clearTimeout(to);
+  }
+  disegna();
+}
+function scheletroAnno() {
+  box.className = "box neutro anno";
+  box.setAttribute("aria-busy", "true");
+  box.setAttribute("aria-label", "Caricamento in corso");
+  box.append(el("div", "sk sk-cal"), el("div", "sk sk-cal grande"));
+}
+// Marcatore: sagoma dal tipo, riempimento dalla variante v (0..3 = pieno/strisce/metà/anello; da 4 si cicla variando la luminosità)
+function marcatore(e, v, hex) {
+  const t = Math.floor(v / 4) % 3;
+  const m = el("span", "mk mk-" + (e.tipo === "appello" ? "a" : "i") + " v" + (v % 4) + (t ? " t" + t : "") + (e.conseguita ? " conseg" : ""));
+  m.style.setProperty("--mc", hex);
+  return nascosto(m);
+}
+function legenda(tit, voci, cls, oggi, mk) {
+  const w = el("div", "cal-legbox" + cls), ul = el("ul", "cal-leg");
+  w.append(nascosto(el("p", "cal-legtit", tit)));
+  ul.setAttribute("aria-label", tit);
+  voci.forEach(x => {
+    const cons = x.conseguita === true, li = el("li", "cal-voce" + (cons ? " conseg" : "")), n = el("span", "cal-nome"), t = el("div", "cal-vtxt");
+    if (cons) n.append(nascosto(el("span", null, "✓ ")));
+    n.append(document.createTextNode((typeof x.nome === "string" && x.nome) || x.slug));
+    if (cons) n.append(el("span", "sr", " (conseguita)"));
+    const p = prossimaData(x, oggi);
+    t.append(n, el("span", "cal-prox", p ? dataBreve(p) : ""));
+    li.append(mk({ slug: x.slug, tipo: "appello", conseguita: false }), t);
+    ul.append(li);
+  });
+  w.append(ul);
+  return w;
+}
+// Ridisegna senza nuovo fetch; se il focus era nel calendario lo rimette sull'elemento equivalente (o sul titolo)
+function ridisegna(fk) {
+  const dentro = box.contains(document.activeElement);
+  if (fk === undefined && dentro) fk = document.activeElement.dataset.f;
+  disegna();
+  if (!dentro) return;
+  const e = fk ? box.querySelector('[data-f="' + fk + '"]') : null, f = e && !e.disabled ? e : box.querySelector(".cal-titolo");
+  if (f) f.focus();
+}
+function vaiMese(delta) {
+  const j = sa.i + delta;
+  if (!sa.mesi || j < 0 || j >= sa.mesi.length) return;
+  sa.mese = sa.mesi[j].chiave; sa.sel = null; // cambiando mese la selezione si azzera
+  ridisegna(delta < 0 ? "prev" : "next");
+}
+function disegnaAnno() {
+  const oggi = oggiUTC(), d = st.grezzo, fin = d.finestra, mesi = mesiFinestra(fin.da, fin.a);
+  let i = sa.mese ? mesi.findIndex(x => x.chiave === sa.mese) : -1; // il mese guardato sopravvive ai ridisegni
+  if (i < 0) i = meseIniziale(mesi, oggi, ca.mese);
+  const mm = mesi[i];
+  sa.mesi = mesi; sa.i = i; sa.mese = mm.chiave;
+  const mat = d.materie.filter(x => x && typeof x.slug === "string");
+  const rec = x => ca.anno > 1 && x.recupero === true;
+  const ord = mat.filter(x => !rec(x)).concat(mat.filter(rec)), hex = {};
+  ord.forEach(x => { hex[x.slug] = risolviColore(x.colore, mq.matches); });
+  const vv = assegnaVarianti(ord.map(x => ({ slug: x.slug, hex: hex[x.slug] })));
+  const mk = e => marcatore(e, vv[e.slug] || 0, hex[e.slug]);
+  const ev = eventiPerGiorno(ord, fin.da, fin.a);
+
+  box.className = "box neutro anno";
+  box.setAttribute("aria-label", "Calendario anno " + ca.anno);
+  const testa = el("div", "cal-testa");
+  testa.append(el("b", null, "Anno " + ca.anno), el("span", null, intervalloFinestra(fin.da, fin.a)));
+
+  const bt = (txt, lab, fk, dis, fn, cls) => {
+    const b = el("button", "cal-btn" + (cls || ""), txt);
+    b.type = "button"; b.dataset.f = fk; b.disabled = dis;
+    if (lab) b.setAttribute("aria-label", lab);
+    b.addEventListener("click", fn);
+    return b;
+  };
+  const titolo = el("span", "cal-titolo", MESI_LUNGHI[mm.mese] + " " + mm.anno);
+  titolo.tabIndex = -1;
+  const o = new Date(oggi), chOggi = o.getUTCFullYear() + "-" + String(o.getUTCMonth() + 1).padStart(2, "0");
+  const nav = el("div", "cal-nav");
+  nav.append(bt("‹", "Mese precedente", "prev", i === 0, () => vaiMese(-1)), titolo);
+  if (oggi >= parseISO(fin.da) && oggi <= parseISO(fin.a) && chOggi !== mm.chiave) {
+    nav.append(bt("Oggi", null, "oggi", false, () => { sa.mese = chOggi; sa.sel = null; ridisegna("oggi"); }, " cal-oggi"));
+  }
+  nav.append(bt("›", "Mese successivo", "next", i === mesi.length - 1, () => vaiMese(1)));
+
+  const g = el("div", "cal-griglia");
+  g.setAttribute("role", "group");
+  g.setAttribute("aria-label", titolo.textContent);
+  LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
+  costruisciMese(mm.anno, mm.mese).forEach(c => {
+    if (c.ms === null) { g.append(nascosto(el("div", "cal-cella vuota"))); return; }
+    const lista = ev.get(c.ms) || [];
+    const cella = el("div", "cal-cella" + (c.ms < oggi ? " passata" : "") + (c.ms === oggi ? " oggi" : "") + (sa.sel === c.ms ? " sel" : ""));
+    cella.append(el("span", "cal-num", String(c.giorno)));
+    if (lista.length) {
+      const r = el("span", "cal-mk");
+      lista.slice(0, 3).forEach(e => r.append(mk(e)));
+      cella.append(r);
+      if (lista.length > 3) cella.append(nascosto(el("span", "cal-piu", "+" + (lista.length - 3))));
+      const scegliGiorno = () => { sa.sel = sa.sel === c.ms ? null : c.ms; ridisegna("c" + c.ms); };
+      cella.setAttribute("role", "button");
+      cella.tabIndex = 0;
+      cella.setAttribute("aria-pressed", String(sa.sel === c.ms));
+      cella.setAttribute("aria-label", etichettaAriaGiorno(c.ms, lista));
+      cella.dataset.f = "c" + c.ms;
+      cella.addEventListener("click", scegliGiorno);
+      cella.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); scegliGiorno(); } });
+    }
+    g.append(cella);
+  });
+
+  const det = el("div", "cal-det");
+  det.setAttribute("aria-live", "polite");
+  if (sa.sel !== null && ev.has(sa.sel)) {
+    det.append(el("b", null, FMT_LUNGA.format(sa.sel)));
+    ev.get(sa.sel).forEach(e => {
+      const r = el("div", "cal-riga");
+      r.append(mk(e), document.createTextNode(e.nome + " · " + etichettaEvento(e) + (e.conseguita ? " (conseguita)" : "")));
+      det.append(r);
+    });
+  } else det.append(el("span", "cal-aiuto", "Scegli un giorno con un evento"));
+
+  box.append(testa, nav, g, det);
+  const princ = ord.filter(x => !rec(x)), recu = ord.filter(rec);
+  if (princ.length) box.append(legenda("Materie · Anno " + ca.anno, princ, "", oggi, mk));
+  if (recu.length) box.append(legenda("Da recuperare · Anno " + (ca.anno - 1), recu, " rec", oggi, mk));
+  const key = el("div", "cal-key");
+  key.setAttribute("aria-hidden", "true");
+  [["mk-a", "appello"], ["mk-i", "itinere"]].forEach(([c, t]) => { const k = el("span", "cal-k"); k.append(el("span", "mk " + c), t); key.append(k); });
+  box.append(key);
+  if (st.nota) box.append(el("p", "nota", "dati non aggiornati"));
+}
+// Frecce sinistra/destra e Esc quando il focus è nel calendario
+box.addEventListener("keydown", e => {
+  if (!ca.attivo || st.fase !== "ok") return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); vaiMese(-1); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); vaiMese(1); }
+  else if (e.key === "Escape" && sa.sel !== null) { sa.sel = null; ridisegna(); }
+});
 
 // ---------- Timer e avvio ----------
 function pianifica() {
