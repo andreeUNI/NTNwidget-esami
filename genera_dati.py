@@ -8,9 +8,9 @@ inizio, colore, conseguita, anno, aggiornato. Copia anche widget.html in site/.
 Proprieta' Notion lette (tutte opzionali tranne il titolo; se mancano o sono
 vuote il valore e' null, oppure False per "Conseguita"):
   - "Data Esame Next"  (date)      1° appello         -> "esame"
-  - "Data Esame 2"     (date)      2° appello         -> "esame2"
-  - "Itinere 1"        (date)      prova in itinere   -> "itinere1"
-  - "Itinere 2"        (date)      prova in itinere   -> "itinere2"
+  - "Data Esame Next 2"     (date)      2° appello         -> "esame2"
+  - "Data Itinere 1"        (date)      prova in itinere   -> "itinere1"
+  - "Data Itinere 2"        (date)      prova in itinere   -> "itinere2"
   - "Inizio studio"    (date)                         -> "inizio"
   - "HEX Color"        (testo)                        -> "colore"
   - "Conseguita"       (checkbox)                     -> "conseguita"
@@ -63,14 +63,14 @@ NOTION_VERSION = os.environ.get("NOTION_VERSION") or "2022-06-28"
 PROP_ESAME = "Data Esame Next"      # tipo date
 PROP_INIZIO = "Inizio studio"       # tipo date, opzionale
 PROP_COLORE = "HEX Color"           # testo con un esadecimale (es. #A4E7D6)
-PROP_ESAME2 = "Data Esame 2"        # tipo date, opzionale: 2° appello
-PROP_ITINERE1 = "Itinere 1"         # tipo date, opzionale
-PROP_ITINERE2 = "Itinere 2"         # tipo date, opzionale
+PROP_ESAME2 = "Data Esame Next 2"        # tipo date, opzionale: 2° appello
+PROP_ITINERE1 = "Data Itinere 1"         # tipo date, opzionale
+PROP_ITINERE2 = "Data Itinere 2"         # tipo date, opzionale
 PROP_CONSEGUITA = "Conseguita"      # checkbox (o formula booleana), opzionale
 PROP_ANNO = "Anno"                  # numero/select/testo con 1, 2 o 3, opzionale
 
 # Calendari per anno: l'anno 1 inizia a ottobre di ANNO_INIZIO_CORSO (variabile d'ambiente)
-ANNO_INIZIO_CORSO_DEFAULT = 2026
+ANNO_INIZIO_CORSO_DEFAULT = 2025
 MESE_INIZIO_AA = 10
 # True: il calendario N recupera solo le non conseguite dell'anno N-1;
 # False: recupera le non conseguite di tutti gli anni < N.
