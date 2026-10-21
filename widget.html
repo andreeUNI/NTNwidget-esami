@@ -11,8 +11,12 @@
   --text: #37352F;
   --fill: 14%;
   --c: #6B6A66;
-  --d: clamp(8px, 14px, 28px);
-  --gap: max(8px, calc(var(--d) * .55));
+  /* Margine dai bordi dell'embed: 12px a 240px di larghezza, cresce in modo lineare fino a 2cm (da 640px in su) */
+  --margine: clamp(12px, calc(12px + (100vw - 240px) * .16), 2cm);
+  /* Pallini: diametro (px), rapporto gap/diametro e fattore d'ombra sono impostati da JS sulla griglia (adatta) */
+  --dp: 14px;
+  --rg: .4;
+  --k: 1;
   --soft: color-mix(in srgb, var(--text) 74%, transparent);
   --glass-shine: rgba(255, 255, 255, 0.55);
   --glass-edge: rgba(255, 255, 255, 0.38);
@@ -21,6 +25,9 @@
   --cal-end: #E61919;
   --cal-text: #D91B1B;
   --arc-r: 74px;
+  /* Ingombro naturale della ruota dei giorni (JS la rimpicciolisce con --rk se lo spazio non basta) */
+  --ruota-w: clamp(88px, 30vw, 116px);
+  --ruota-h: calc(var(--arc-r) * 2.16 + 4px);
 }
 /* Unica regola per il tema scuro */
 @media (prefers-color-scheme: dark) {
@@ -35,6 +42,10 @@
 }
 /* Altezza piena: il box può riempire tutto l'iframe dell'embed */
 html, body { background: transparent; margin: 0; height: 100%; }
+/* Rete di sicurezza contro la barra di scorrimento (vista materia e vista annuale).
+   Verificato: con height:100% e layout adattivo nessun contenuto viene tagliato. */
+html.vista-materia, html.vista-materia body,
+html.vista-anno, html.vista-anno body { overflow: hidden; }
 body.solid { background: #FFFFFF; }
 /* Tema scuro: dopo le regole chiare, altrimenti body.solid ritornerebbe bianco */
 @media (prefers-color-scheme: dark) {
@@ -52,22 +63,13 @@ body {
   color: var(--text);
 }
 
-/* Contenitore principale Glassmorphism 3D con layout affiancato centrato */
+/* Contenitore principale Glassmorphism 3D */
 .box {
   width: 100%;
-  /* Riempie tutta l'altezza dell'embed (nessun vuoto sotto); mai più basso del contenuto */
-  min-height: 100%;
   box-sizing: border-box;
-  /* Spazio sopra e sotto proporzionale all'altezza dell'embed (minimo 12px come prima) */
-  padding: clamp(12px, 6vh, 40px) 12px;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  /* Le righe restano compatte e il blocco di contenuto è centrato in verticale */
-  align-content: center;
-  justify-content: center;
-  justify-items: center;
-  column-gap: clamp(8px, 3vw, 18px);
+  /* Il CONTENUTO sta dentro il margine (--margine in orizzontale, min(--margine, 12vh) in verticale, minimo 10px);
+     il bordo vetro resta a filo dell'embed */
+  padding: max(10px, min(var(--margine), 12vh)) var(--margine);
   text-align: center;
   overflow: hidden;
   border-radius: 14px;
@@ -85,6 +87,27 @@ body {
     inset 0 1px 1px rgba(255, 255, 255, 0.25),
     inset 0 -1px 2px rgba(0, 0, 0, 0.08);
   color: var(--text);
+}
+/* Vista materia: il box è alto quanto l'iframe (mai di più: è questo che evita lo scroll).
+   Righe: 1 riquadro .testo | 2 pillole | 3 colonne (pallini a sinistra, ruota a destra) | 4 nota.
+   La riga 3 è minmax(0, 1fr): il suo spazio non dipende dal contenuto, quindi si può misurare senza cicli di retroazione.
+   JS imposta --hm (altezza del contenuto delle colonne) quando avanza spazio, così il blocco resta centrato in verticale. */
+.box:not(.anno) {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, var(--hm, 1fr)) auto;
+  align-items: center;
+  align-content: center;
+  justify-content: stretch;
+  justify-items: center;
+  column-gap: clamp(8px, 3vw, 18px);
+}
+.box.errore {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+}
+  column-gap: clamp(8px, 3vw, 18px);
 }
 .box.neutro {
   border-color: color-mix(in srgb, var(--text) 22%, rgba(255, 255, 255, 0.25));
@@ -104,22 +127,33 @@ body {
   display: none !important;
 }
 
-/* Colonna 1 (Sinistra): Riquadro calendario e Griglia */
+/* Disposizione: .testo in alto al centro (largo come le due colonne), pillole sotto, poi le due colonne */
 .testo,
-.sk-testo,
+.sk-testo {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: center;
+}
+.appelli {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: center;
+}
 .griglia {
   grid-column: 1;
-}
-.testo:only-child {
-  grid-column: 1 / -1;
+  grid-row: 3;
+  justify-self: center;
+  align-self: center;
 }
 
 /* Riquadro superiore stile Icona Calendario 3D macOS/iOS */
 .testo {
   position: relative;
   isolation: isolate;
-  margin: 6px 0 0;
-  padding: 13px 16px 8px;
+  margin: 6px 0 8px;
+  /* Più allungato di prima: largo 200-320px (mai oltre l'area interna) e con più respiro in verticale */
+  width: min(100%, clamp(200px, 40vw, 320px));
+  padding: 17px 18px 11px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -221,15 +255,41 @@ body {
   line-height: 1.3;
   color: var(--soft);
 }
+.box:not(.anno) .nota { grid-row: 4; }
 
-/* Griglia a 7 colonne centrata: ariosa ma compatibile con ~240px */
+/* Griglia a 14 colonne (due settimane per riga). Il diametro --dp lo calcola JS (adatta) sullo spazio disponibile;
+   ?size è solo il massimo. Le righe hanno altezza = diametro, così l'altezza della griglia è deterministica. */
 .griglia {
+  --gp: calc(var(--dp) * var(--rg));
+  --b1: max(1px, calc(1px * var(--k)));
+  --b2: max(1px, calc(2px * var(--k)));
+  --ow: max(1px, calc(2px * var(--k)));
+  --oo: calc(var(--gp) * .3);
+  --ins: max(.5px, calc(1px * var(--k)));
+  --sr: .78;
+  position: relative;
+  isolation: isolate;
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, var(--d)));
-  justify-content: center;
-  width: 100%;
-  gap: var(--gap);
-  margin-top: 12px;
+  grid-template-columns: repeat(var(--col, 14), var(--dp));
+  grid-auto-rows: var(--dp);
+  gap: var(--gp);
+  width: max-content;
+  margin: 0;
+}
+.griglia.mini { --sr: .85; }
+/* Linea tratteggiata verticale al centro, tra la 7ª e l'8ª colonna: decorativa (pseudo-elemento, niente eventi),
+   dietro ai pallini, un po' oltre la prima e l'ultima riga. Assente in ?mode=week (una sola riga da 7). */
+.griglia:not(.settimana):not(.mese)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: calc(var(--gp) * -.6);
+  bottom: calc(var(--gp) * -.6);
+  width: 0;
+  border-left: 1px dashed color-mix(in srgb, var(--text) 30%, transparent);
+  transform: translateX(-.5px);
+  pointer-events: none;
 }
 .griglia.flusso {
   display: flex;
@@ -239,14 +299,18 @@ body {
 .gg {
   display: flex;
   justify-content: center;
-  font-size: 10px;
+  align-items: center;
+  overflow: hidden;
+  font-size: min(10px, calc(var(--dp) * .9));
   font-weight: 600;
   line-height: 1;
   color: var(--soft);
   user-select: none;
 }
+/* Sotto ~7px le lettere non sono leggibili: JS le toglie (e libera una riga) */
+.griglia.senza-gg .gg { display: none; }
 
-/* Pallini in vetro opaco fisico 3D */
+/* Pallini in vetro opaco fisico 3D. Bordi, ombre, anello "oggi" e raggi scalano con --k (= diametro / 14px). */
 .dot {
   width: 100%;
   aspect-ratio: 1;
@@ -264,17 +328,18 @@ body {
       color-mix(in srgb, var(--c) 96%, transparent) 60%,
       color-mix(in srgb, var(--c) 82%, #000000) 100%
     );
-  border: 1px solid color-mix(in srgb, var(--c) 65%, rgba(255, 255, 255, 0.5));
+  border: var(--b1, 1px) solid color-mix(in srgb, var(--c) 65%, rgba(255, 255, 255, 0.5));
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   box-shadow:
-    0 2px 5px color-mix(in srgb, var(--c) 35%, rgba(0, 0, 0, 0.22)),
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.55),
-    inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.25);
+    0 calc(2px * var(--k)) calc(5px * var(--k)) color-mix(in srgb, var(--c) 35%, rgba(0, 0, 0, 0.22)),
+    inset 0 calc(1.5px * var(--k)) calc(2px * var(--k)) rgba(255, 255, 255, 0.55),
+    inset 0 calc(-1.5px * var(--k)) calc(2.5px * var(--k)) rgba(0, 0, 0, 0.25);
 }
-.flusso .dot {
-  width: var(--d);
-  flex: none;
+/* Con centinaia di pallini il blur dello sfondo di ciascuno costa troppo e non si vede: lo si toglie */
+.griglia.fitta .dot {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Giorni passati: pallini fisici pieni in vetro opaco ma scoloriti / spenti */
@@ -292,12 +357,12 @@ body {
       color-mix(in srgb, var(--c) 18%, color-mix(in srgb, var(--text) 30%, #7A7A7A)) 65%,
       color-mix(in srgb, var(--c) 15%, color-mix(in srgb, var(--text) 38%, #636366)) 100%
     );
-  border: 1px solid color-mix(in srgb, var(--text) 22%, rgba(122, 122, 122, 0.42));
+  border: var(--b1, 1px) solid color-mix(in srgb, var(--text) 22%, rgba(122, 122, 122, 0.42));
   filter: saturate(0.2) brightness(0.92);
   box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.14),
-    inset 0 1px 1.5px rgba(255, 255, 255, 0.2),
-    inset 0 -1.5px 2px rgba(0, 0, 0, 0.22);
+    0 calc(1px * var(--k)) calc(2px * var(--k)) rgba(0, 0, 0, 0.14),
+    inset 0 calc(1px * var(--k)) calc(1.5px * var(--k)) rgba(255, 255, 255, 0.2),
+    inset 0 calc(-1.5px * var(--k)) calc(2px * var(--k)) rgba(0, 0, 0, 0.22);
 }
 
 /* Giorni futuri: anello/incavo in vetro traslucido */
@@ -307,33 +372,33 @@ body {
     color-mix(in srgb, var(--c) 14%, rgba(255, 255, 255, 0.18)) 0%,
     color-mix(in srgb, var(--c) 6%, transparent) 100%
   );
-  border: 2px solid color-mix(in srgb, var(--c) 78%, rgba(255, 255, 255, 0.35));
+  border: var(--b2, 2px) solid color-mix(in srgb, var(--c) 78%, rgba(255, 255, 255, 0.35));
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.12),
-    inset 0 1.5px 2.5px rgba(0, 0, 0, 0.18),
-    inset 0 -1px 1.5px rgba(255, 255, 255, 0.35);
+    0 calc(1px * var(--k)) calc(3px * var(--k)) rgba(0, 0, 0, 0.12),
+    inset 0 calc(1.5px * var(--k)) calc(2.5px * var(--k)) rgba(0, 0, 0, 0.18),
+    inset 0 calc(-1px * var(--k)) calc(1.5px * var(--k)) rgba(255, 255, 255, 0.35);
 }
 
-/* Giorno corrente: gemma in vetro vivida con outline pulsante */
+/* Giorno corrente: gemma in vetro vivida con anello pulsante (spessore e distanza scalano: non toccano i vicini) */
 .dot.oggi {
-  outline: 2px solid var(--c);
-  outline-offset: 2px;
+  outline: var(--ow, 2px) solid var(--c);
+  outline-offset: var(--oo, 2px);
   box-shadow:
-    0 0 8px color-mix(in srgb, var(--c) 55%, transparent),
-    0 2px 5px rgba(0, 0, 0, 0.25),
-    inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
-    inset 0 -1.5px 2.5px rgba(0, 0, 0, 0.25);
+    0 0 calc(8px * var(--k)) color-mix(in srgb, var(--c) 55%, transparent),
+    0 calc(2px * var(--k)) calc(5px * var(--k)) rgba(0, 0, 0, 0.25),
+    inset 0 calc(1.5px * var(--k)) calc(2px * var(--k)) rgba(255, 255, 255, 0.65),
+    inset 0 calc(-1.5px * var(--k)) calc(2.5px * var(--k)) rgba(0, 0, 0, 0.25);
   animation: pulse 2.4s ease-in-out infinite;
 }
 
-/* Giorno dell'esame: rombo smussato in vetro 3D (distinguibile per forma) */
+/* Giorno dell'esame: rombo smussato in vetro 3D (distinguibile per forma; più pieno sotto ~8px) */
 .dot.esame {
-  border-radius: 3px;
-  transform: rotate(45deg) scale(.78);
+  border-radius: max(1px, calc(3px * var(--k)));
+  transform: rotate(45deg) scale(var(--sr, .78));
   box-shadow:
-    0 2px 6px color-mix(in srgb, var(--c) 42%, rgba(0, 0, 0, 0.26)),
-    inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.6),
-    inset -1.5px -1.5px 2.5px rgba(0, 0, 0, 0.28);
+    0 calc(2px * var(--k)) calc(6px * var(--k)) color-mix(in srgb, var(--c) 42%, rgba(0, 0, 0, 0.26)),
+    inset calc(1.5px * var(--k)) calc(1.5px * var(--k)) calc(2px * var(--k)) rgba(255, 255, 255, 0.6),
+    inset calc(-1.5px * var(--k)) calc(-1.5px * var(--k)) calc(2.5px * var(--k)) rgba(0, 0, 0, 0.28);
 }
 
 @keyframes pulse {
@@ -343,9 +408,9 @@ body {
 
 /* ===== Parte 2: appelli (rombi selezionabili) e itinere (triangoli) ===== */
 
-/* Rombo di un appello selezionabile: cliccabile, con area di tocco ~24px.
-   L'area è uno pseudo-elemento controruotato (resta un quadrato allineato allo schermo) e
-   compensa la scala .78 del rombo; è limitata così da non invadere i pallini vicini. */
+/* Rombo di un appello selezionabile: cliccabile. L'area di tocco è uno pseudo-elemento controruotato
+   (resta un quadrato allineato allo schermo) che compensa la scala del rombo; misura al massimo 24px e mai più
+   della cella (diametro + gap): con pallini piccoli il bersaglio comodo sono le pillole. */
 .dot.esame[role="button"] {
   position: relative;
   cursor: pointer;
@@ -356,24 +421,24 @@ body {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: calc(min(24px, var(--d) + 2 * var(--gap) - 2px) / .78);
-  height: calc(min(24px, var(--d) + 2 * var(--gap) - 2px) / .78);
+  width: calc(min(24px, var(--dp) + var(--gp)) / var(--sr, .78));
+  height: calc(min(24px, var(--dp) + var(--gp)) / var(--sr, .78));
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 /* Appello selezionato: rombo vivido con alone */
 .dot.esame.sel {
   box-shadow:
-    0 0 8px color-mix(in srgb, var(--c) 65%, transparent),
-    0 2px 6px color-mix(in srgb, var(--c) 42%, rgba(0, 0, 0, 0.26)),
-    inset 1.5px 1.5px 2px rgba(255, 255, 255, 0.65),
-    inset -1.5px -1.5px 2.5px rgba(0, 0, 0, 0.28);
+    0 0 calc(8px * var(--k)) color-mix(in srgb, var(--c) 65%, transparent),
+    0 calc(2px * var(--k)) calc(6px * var(--k)) color-mix(in srgb, var(--c) 42%, rgba(0, 0, 0, 0.26)),
+    inset calc(1.5px * var(--k)) calc(1.5px * var(--k)) calc(2px * var(--k)) rgba(255, 255, 255, 0.65),
+    inset calc(-1.5px * var(--k)) calc(-1.5px * var(--k)) calc(2.5px * var(--k)) rgba(0, 0, 0, 0.28);
 }
 /* Appello non selezionato: spento (opaco, meno saturo, senza alone, bordo tratteggiato), sempre un rombo */
 .dot.esame.spento {
   opacity: .4;
   filter: saturate(.45);
-  border: 1px dashed color-mix(in srgb, var(--c) 75%, transparent);
+  border: var(--b1, 1px) dashed color-mix(in srgb, var(--c) 75%, transparent);
   box-shadow: none;
 }
 .dot.esame.spento.oggi {
@@ -400,7 +465,7 @@ body {
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  filter: drop-shadow(0 1.5px 1.5px color-mix(in srgb, var(--c) 40%, rgba(0, 0, 0, 0.3)));
+  filter: drop-shadow(0 calc(1.5px * var(--k)) calc(1.5px * var(--k)) color-mix(in srgb, var(--c) 40%, rgba(0, 0, 0, 0.3)));
 }
 .dot.itinere::before,
 .dot.itinere::after {
@@ -415,7 +480,7 @@ body {
   background: color-mix(in srgb, var(--c) 65%, rgba(255, 255, 255, 0.5));
 }
 .dot.itinere::after {
-  inset: 1px;
+  inset: var(--ins, 1px);
   background:
     radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.5) 0%, transparent 55%),
     linear-gradient(
@@ -428,7 +493,7 @@ body {
 /* Itinere passato: stessa attenuazione di .passato, sagoma conservata */
 .dot.itinere.passato {
   opacity: .92;
-  filter: saturate(0.2) brightness(0.92) drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.2));
+  filter: saturate(0.2) brightness(0.92) drop-shadow(0 calc(1px * var(--k)) calc(1.5px * var(--k)) rgba(0, 0, 0, 0.2));
 }
 .dot.itinere.passato::before {
   background: color-mix(in srgb, var(--text) 22%, rgba(122, 122, 122, 0.42));
@@ -452,15 +517,14 @@ body {
   color: #4B5059;
 }
 
-/* Pillole di scelta dell'appello (colonna 1, sotto .testo): bersagli di tocco più comodi dei rombi */
+/* Pillole di scelta dell'appello (centrate sotto .testo): bersagli di tocco più comodi dei rombi */
 .appelli {
-  grid-column: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 4px;
   max-width: 100%;
-  margin-top: 8px;
+  margin: 0 0 8px;
 }
 .pillola {
   -webkit-appearance: none;
@@ -506,19 +570,15 @@ body {
   background: currentColor;
 }
 
-/* Con le pillole la colonna 1 ha 3 righe: la ruota dei giorni le copre tutte */
-.box.con-appelli .ruota-giorni {
-  grid-row: 1 / span 3;
-}
-
-/* Colonna 2 (Destra): Indicatore Circolare ad Arco Glassmorph (.ruota-giorni) */
+/* Colonna 2 (Destra): Indicatore Circolare ad Arco Glassmorph (.ruota-giorni), centrato in verticale nello spazio delle colonne.
+   Dimensione naturale = --ruota-w × --ruota-h; JS la riduce con --rk (zoom) se l'altezza o la larghezza disponibili non bastano. */
 .ruota-giorni {
   grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: stretch;
+  grid-row: 3;
+  align-self: center;
   position: relative;
-  width: clamp(88px, 30vw, 116px);
-  min-height: 142px;
+  width: var(--ruota-w);
+  height: var(--ruota-h);
   display: flex;
   align-items: center;
   user-select: none;
@@ -526,6 +586,11 @@ body {
   filter:
     drop-shadow(0 4px 10px rgba(0, 0, 0, 0.28))
     drop-shadow(0 1px 3px color-mix(in srgb, var(--c) 35%, rgba(0, 0, 0, 0.2)));
+}
+/* Senza pallini (es. data esame non impostata) la ruota sta al centro */
+.box.senza-griglia > .ruota-giorni {
+  grid-column: 1 / -1;
+  justify-self: center;
 }
 
 /* Linea circolare sottile in vetro sull'emisfero destro */
@@ -668,7 +733,7 @@ body {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-/* Scheletro di caricamento (stessa struttura del contenuto, niente salti) */
+/* Scheletro di caricamento (stessa struttura del contenuto: blocco in alto, due colonne sotto; niente salti) */
 .sk {
   background: linear-gradient(
     135deg,
@@ -680,11 +745,12 @@ body {
   animation: sk 1.6s ease-in-out infinite;
 }
 .sk-titolo { font-size: 15px; height: 1.3em; width: 45%; border-radius: 4px; }
-.sk-testo { font-size: 13px; height: 44px; width: 136px; margin: 6px 0 0; border-radius: 14px; }
+.sk-testo { font-size: 13px; height: 62px; width: min(100%, clamp(200px, 40vw, 320px)); margin: 6px 0 0; border-radius: 14px; }
 .ruota-sk .giorno-focus {
   width: 38px;
   height: 32px;
 }
+.dot.sk { border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 @keyframes sk { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
 /* Zoom opzionale (?zoom=1.4): --z viene impostata dal JS; senza parametro vale 1 e non cambia nulla.
@@ -692,33 +758,29 @@ body {
 .box > * {
   zoom: var(--z, 1);
 }
+/* La ruota combina lo zoom dell'utente (--z) con la riduzione automatica (--rk) */
+.box > .ruota-giorni {
+  zoom: calc(var(--z, 1) * var(--rk, 1));
+}
 
-/* Calibrazione per larghezze strette (~240px) senza alcun overflow o scroll */
+/* Calibrazione per larghezze strette (~240px) senza alcun overflow o scroll.
+   Il padding del box non cambia più qui: lo governa --margine (12px a 240px). */
 @media (max-width: 265px) {
   :root {
     --arc-r: 58px;
-    --gap: max(5px, calc(var(--d) * .42));
+    --ruota-w: 86px;
   }
-  .box {
-    padding: clamp(9px, 5vh, 32px) 6px;
+  .box:not(.anno) {
     column-gap: 6px;
   }
   .testo {
-    padding: 11px 10px 6px;
+    padding: 14px 10px 8px;
   }
   .testo .principale {
     font-size: 11px;
   }
   .testo .data {
     font-size: 12px;
-  }
-  .griglia {
-    max-width: 128px;
-    margin-top: 9px;
-  }
-  .ruota-giorni {
-    width: 78px;
-    min-height: 118px;
   }
 }
 
@@ -730,7 +792,7 @@ body {
 @media (max-width: 265px) {
   .appelli {
     gap: 3px;
-    margin-top: 6px;
+    margin-bottom: 6px;
   }
   .pillola {
     padding: 3px 6px;
@@ -742,60 +804,229 @@ body {
   }
 }
 
-/* ===== Parte 3: calendari annuali (?anno=1|2|3): un mese alla volta, una colonna ===== */
-.box.anno { grid-template-columns: minmax(0, 1fr); justify-content: stretch; justify-items: stretch; row-gap: 6px; text-align: left; padding: clamp(10px, 3vh, 24px) 8px; }
-.cal-testa { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 8px; font-size: 11px; color: var(--soft); }
-.cal-testa b { font-size: 13px; color: var(--text); }
-.cal-nav { display: flex; align-items: center; gap: 4px; }
-.cal-btn { -webkit-appearance: none; appearance: none; margin: 0; font: inherit; font-size: 15px; font-weight: 700; line-height: 1; min-width: 28px; min-height: 28px; box-sizing: border-box; padding: 0 8px; color: var(--text); cursor: pointer; touch-action: manipulation; background: color-mix(in srgb, var(--text) 8%, transparent); border: 1px solid color-mix(in srgb, var(--text) 28%, transparent); border-radius: 8px; }
-.cal-btn.cal-oggi { font-size: 11px; }
-.cal-btn:disabled { opacity: .35; cursor: default; }
-.cal-titolo { flex: 1; min-width: 0; text-align: center; font-size: 12px; font-weight: 700; text-transform: capitalize; }
-.cal-griglia { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
-.cal-cella { position: relative; aspect-ratio: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 2px 0 3px; border-radius: 6px; font-size: 10.5px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
-.cal-cella[role="button"] { cursor: pointer; touch-action: manipulation; background: color-mix(in srgb, var(--text) 7%, transparent); }
-.cal-cella.sel { outline: 2px solid var(--text); outline-offset: -2px; }
-.cal-cella:focus-visible, .cal-btn:focus-visible, .cal-titolo:focus-visible { outline: 3px double var(--text); outline-offset: 2px; }
-.cal-num { min-width: 14px; height: 14px; line-height: 14px; text-align: center; border-radius: 50%; }
-.cal-cella.oggi .cal-num { outline: 1.5px solid var(--text); outline-offset: 0; animation: calpulse 2.4s ease-in-out infinite; }
-@keyframes calpulse { 0%, 100% { outline-color: var(--text); } 50% { outline-color: color-mix(in srgb, var(--text) 30%, transparent); } }
-.cal-mk { display: flex; justify-content: center; align-items: center; gap: 1px; height: 9px; }
-.cal-piu { position: absolute; top: 0; right: 0; font-size: 8px; font-weight: 700; color: var(--soft); }
-/* Marcatori: sagoma = tipo (rombo appello, triangolo itinere); riempimento = variante (--mf) per colori simili */
-.mk { --mf: var(--mc); display: block; flex: none; background: var(--mf); }
-.mk.t1 { --mf: color-mix(in srgb, var(--mc) 60%, #fff); }
-.mk.t2 { --mf: color-mix(in srgb, var(--mc) 60%, #000); }
-.mk.v1 { background: repeating-linear-gradient(45deg, var(--mf) 0 2px, color-mix(in srgb, var(--mf) 25%, #fff) 2px 4px); }
-.mk.v2 { background: linear-gradient(90deg, var(--mf) 50%, color-mix(in srgb, var(--mf) 25%, #fff) 50%); }
-.mk.v3 { background: radial-gradient(circle, var(--mf) 0 34%, color-mix(in srgb, var(--mf) 25%, #fff) 36%); }
-.mk-a { width: 6px; height: 6px; margin: 1.25px; border-radius: 1px; transform: rotate(45deg); }
-.mk-i { width: 9px; height: 8px; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.cal-cella.passata .mk { filter: saturate(.3); opacity: .75; }
-.cal-cella .mk.conseg { opacity: .4; }
-.cal-det { min-height: 3.9em; font-size: 11px; line-height: 1.3; overflow-wrap: anywhere; }
-.cal-riga { display: flex; align-items: center; gap: 3px; }
-.cal-aiuto { color: var(--soft); }
-.cal-legbox { min-width: 0; }
-.cal-legbox.rec { border: 1px dashed color-mix(in srgb, var(--text) 38%, transparent); border-radius: 8px; padding: 4px 6px; font-size: 10px; }
-.cal-legtit { margin: 0 0 3px; font-size: 11px; font-weight: 700; }
-.cal-legbox.rec .cal-legtit { font-size: 10px; }
-.cal-leg { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 3px 8px; }
-.cal-voce { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 0 4px; align-items: start; min-width: 0; font-size: 11px; line-height: 1.2; }
-.cal-legbox.rec .cal-voce { font-size: 10px; }
-.cal-voce .mk-a { width: 8px; height: 8px; margin: 2px; }
-.cal-nome { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.cal-voce.conseg { opacity: .6; }
+/* ===== Parte 3: calendari annuali (?anno=1|2|3): tutti i mesi insieme, in orizzontale ===== */
+/* Pannello con sfondo "aurora" a palette fissa. Righe: 1 intestazione | 2 area dei mesi | 3 legenda | 4 nota.
+   La riga 2 è minmax(0, 1fr): la sua altezza non dipende dal contenuto, quindi JS la misura senza cicli di retroazione. */
+.box.anno {
+  --a-base: #A6C9FF;
+  --a1: #7FD8FF; --a2: #CDB4FF; --a3: #8FF3CE; --a4: #FFC9A6;
+  --text: #12203A;   /* testo scuro su toni chiari: >= 10:1 sul punto più scuro */
+  --soft: #22304F;   /* testo secondario: >= 8:1 */
+  --cn: #26344F;     /* colore base neutro dei pallini senza eventi */
+  --pa: 92%;
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  align-items: stretch;
+  text-align: center;
+  background: var(--a-base);
+  border-color: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow:
+    0 8px 24px -4px rgba(24, 40, 96, 0.30),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  .box.anno {
+    --a-base: #131B4B;
+    --a1: #6B2FBF; --a2: #086A76; --a3: #94206F; --a4: #2B4BC0;
+    --text: #F4F7FF;  /* testo chiaro su toni profondi (luminanza massima dello sfondo ~0,12): >= 5,5:1 */
+    --soft: #DDE5FB;  /* >= 4,8:1 */
+    --cn: #E3EAFF;
+    --pa: 68%;
+    border-color: rgba(255, 255, 255, 0.30);
+    box-shadow:
+      0 8px 24px -4px rgba(0, 0, 0, 0.5),
+      inset 0 1px 1px rgba(255, 255, 255, 0.22),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.25);
+  }
+}
+/* Macchie sfumate che derivano lentamente: solo transform, cicli lunghi; il box ha overflow:hidden, quindi niente overflow */
+.box.anno::before {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 22%, var(--a1) 0, transparent 46%),
+    radial-gradient(circle at 86% 14%, var(--a2) 0, transparent 44%),
+    radial-gradient(circle at 18% 88%, var(--a3) 0, transparent 46%),
+    radial-gradient(circle at 84% 84%, var(--a4) 0, transparent 44%);
+  animation: aurora 38s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes aurora {
+  0%   { transform: translate3d(-4%, -3%, 0) rotate(-3deg) scale(1.03); }
+  50%  { transform: translate3d(3%, 4%, 0) rotate(1deg) scale(1.08); }
+  100% { transform: translate3d(5%, -3%, 0) rotate(3deg) scale(1.04); }
+}
+.box.anno > * { position: relative; z-index: 1; }
+
+.cal-testa {
+  grid-row: 1;
+  min-width: 0;
+  margin: 0 0 clamp(4px, 1.2vh, 8px);
+  font-size: clamp(10px, calc(8px + .5vw), 14px);
+  line-height: 1.3;
+  color: var(--soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-testa b { color: var(--text); font-weight: 700; }
+.cal-area {
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* --dp, --rg, --k, --fs, --lh, --gb e --mc li imposta JS (adattaAnno) in base all'area; --c è il colore neutro dei giorni senza eventi */
+.cal-mesi {
+  --c: var(--cn);
+  --dp: 8px;
+  --rg: .35;
+  --k: .6;
+  --gp: calc(var(--dp) * var(--rg));
+  --gb: 8px;
+  --mc: 5;
+  display: grid;
+  grid-template-columns: repeat(var(--mc), max-content);
+  gap: var(--gb);
+  justify-content: center;
+  align-content: center;
+  width: max-content;
+  max-width: none;
+}
+.cal-mese { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+/* L'etichetta non contribuisce alla larghezza del blocco (width:0 + min-width:100%): la sceglie JS (intera, abbreviata o solo mese) */
+.cal-mlab {
+  width: 0;
+  min-width: 100%;
+  height: var(--lh, 14px);
+  font-size: var(--fs, 9px);
+  line-height: var(--lh, 14px);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: center;
+  color: var(--soft);
+}
+.cal-mesi.mini .griglia { --sr: .85; }
+.cal-mesi.senza-gg .gg { display: none; }
+
+/* Pallini del calendario: stesse classi del widget per materia (.dot .passato/.futuro/.oggi/.esame/.itinere);
+   qui solo il colore neutro, il contorno e le varianti. */
+.cal-mesi .dot.passato {
+  opacity: 1;
+  filter: none;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 52%),
+    linear-gradient(135deg, color-mix(in srgb, var(--c) var(--pa), transparent) 0%, color-mix(in srgb, var(--c) calc(var(--pa) - 12%), transparent) 100%);
+  border: var(--b1, 1px) solid color-mix(in srgb, var(--c) 60%, transparent);
+}
+.cal-mesi .dot.oggi { outline-color: var(--c); }
+.dot.ev, .cal-camp .dot {
+  --sh: radial-gradient(circle at 30% 28%, rgba(255, 255, 255, 0.45) 0%, transparent 48%);
+  --lt: color-mix(in srgb, var(--c) 25%, #fff);
+  --s: max(1px, calc(var(--dp) * .2));
+  --pie: linear-gradient(135deg, color-mix(in srgb, var(--c) 88%, #fff) 0%, color-mix(in srgb, var(--c) 96%, transparent) 60%, color-mix(in srgb, var(--c) 82%, #000) 100%);
+  --ct: color-mix(in srgb, var(--text) 58%, var(--c)); /* contorno: stacca la sagoma da qualunque macchia dello sfondo */
+}
+/* Varianti per colori simili: solo background (v0 pieno, v1 strisce a 45°, v2 metà, v3 centro pieno con anello chiaro) */
+.dot.ev.v1 { --pie: repeating-linear-gradient(45deg, var(--c) 0 var(--s), var(--lt) var(--s) calc(var(--s) * 2)); }
+.dot.ev.v2 { --pie: linear-gradient(90deg, var(--c) 50%, var(--lt) 50%); }
+.dot.ev.v3 { --pie: radial-gradient(circle, var(--c) 0 34%, var(--lt) 36%); }
+.dot.ev.esame { background: var(--sh), var(--pie); border-color: var(--ct); }
+.dot.ev.itinere::before { background: var(--ct); }
+.dot.ev.itinere::after { background: var(--sh), var(--pie); }
+/* Evento passato: attenuato e desaturato; materia conseguita: ancora più attenuato (nel calendario non si barra) */
+.dot.ev.att { opacity: .85; filter: saturate(.5); }
+.dot.ev.conseg { opacity: .72; filter: saturate(.3); }
+.dot.ev.att.conseg { opacity: .68; filter: saturate(.2); }
+.dot.ev.itinere.att { filter: saturate(.5) drop-shadow(0 calc(1.5px * var(--k)) calc(1.5px * var(--k)) rgba(0, 0, 0, 0.25)); }
+.dot.ev.itinere.conseg { filter: saturate(.3) drop-shadow(0 calc(1.5px * var(--k)) calc(1.5px * var(--k)) rgba(0, 0, 0, 0.25)); }
+.dot.ev.itinere.att.conseg { filter: saturate(.25) drop-shadow(0 calc(1.5px * var(--k)) calc(1.5px * var(--k)) rgba(0, 0, 0, 0.25)); }
+/* Interazione: l'area di tocco non supera la cella (diametro + gap). Il rombo usa il ::after già definito sopra;
+   il triangolo ha già ::before/::after occupati, quindi usa un elemento .hit. */
+.dot.ev { -webkit-tap-highlight-color: transparent; }
+.dot .hit { display: none; }
+.dot.itinere[role="button"] { cursor: pointer; touch-action: manipulation; }
+.dot.itinere[role="button"] .hit {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(24px, calc(var(--dp) + var(--gp)));
+  height: min(24px, calc(var(--dp) + var(--gp)));
+  transform: translate(-50%, -50%);
+}
+/* Selezionato: anello doppio nel colore del testo */
+.cal-mesi .dot.sel {
+  outline: max(3px, calc(3px * var(--k))) double var(--text);
+  outline-offset: max(1px, var(--oo, 2px));
+}
+.cal-mesi .dot.sel.oggi { outline-color: var(--text); animation: none; }
+
+/* Legenda su un'unica fila (mai a capo): le voci si restringono e il nome va in ellipsis */
+.cal-legenda {
+  --c: var(--cn);
+  --sw: 1.05em;
+  grid-row: 3;
+  margin-top: clamp(4px, 1.4vh, 10px);
+  padding: 2px 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: .9em;
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(8px, calc(6px + .7vw), 12px);
+  line-height: 1.25;
+  color: var(--text);
+}
+.cal-gruppi { flex: 0 1 auto; min-width: 0; margin: 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: .9em; }
+.cal-voci { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; gap: min(.9em, 2vw); margin: 0; padding: 0; list-style: none; }
+.cal-voce { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: .4em; }
+.cal-nome { position: relative; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-ok { flex: none; font-weight: 700; }
+.cal-voce.conseg { opacity: .85; }
 .cal-voce.conseg .cal-nome { text-decoration: line-through; }
-.cal-prox { display: block; font-size: 10px; color: var(--soft); }
-.cal-vtxt { min-width: 0; }
-.cal-key { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 10px; color: var(--soft); }
-.cal-k { display: inline-flex; align-items: center; gap: 3px; }
-.cal-k .mk { --mc: var(--text); }
+.cal-camp {
+  --dp: var(--sw);
+  --gp: .25em;
+  --k: .62;
+  --sr: .8;
+  --b1: 1px; --b2: 1px; --ow: 1px; --oo: 1px; --ins: 1px;
+  flex: 0 1 auto;
+  min-width: .45em;
+  width: var(--sw);
+  height: var(--sw);
+}
+.cal-rec { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; align-items: center; gap: .9em; padding-left: .9em; border-left: 1px dashed color-mix(in srgb, var(--text) 50%, transparent); }
+.cal-rec-et { flex: 0 0 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85em; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--soft); }
+.cal-key { flex: none; display: flex; align-items: center; gap: .9em; font-size: .92em; color: var(--soft); }
+.cal-k { display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; }
+@media (max-width: 419px) { .cal-key { display: none; } }
+.box.anno .nota { grid-row: 4; margin: 2px 0 0; font-size: 10px; color: var(--soft); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.sk-cal { height: 28px; width: 100%; border-radius: 8px; }
-.sk-cal.grande { height: 190px; }
-@media (max-width: 265px) { .box.anno { padding: clamp(9px, 3vh, 20px) 6px; } .cal-cella { font-size: 10px; } }
-@media (prefers-reduced-motion: reduce) { .cal-cella.oggi .cal-num { animation: none; } }
+
+/* Scheletro: stessa aurora, 10 blocchi segnaposto con le stesse misure del contenuto */
+.sk-testa { height: 1.2em; width: 40%; margin: 0 auto; border-radius: 6px; }
+.sk-mgrid { width: calc(var(--dp) * 7 + var(--gp) * 6); height: calc(var(--dp) * 6 + var(--gp) * 5); border-radius: calc(var(--dp) * .8); }
+.cal-mesi:not(.senza-gg) .sk-mgrid { height: calc(var(--dp) * 7 + var(--gp) * 6); }
+.sk-legbar { height: 1.2em; width: 55%; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { .box.anno::before { animation: none; } }
 </style>
 </head>
 <body>
@@ -1085,8 +1316,87 @@ function applicaEventi(piano, eventi) {
   return { gruppo: piano.gruppo, offset: piano.offset, items };
 }
 
+// Parte A: pallini a righe da 14. Tutte funzioni pure.
+const COLONNE_PALLINI = 14;
+const SOGLIA_LETTERE = 7; // sotto questo diametro (px) le lettere L M M G V S D non si leggono e si nascondono
+
+// Come costruisciPallini (stessi stati passato/oggi/futuro/esame, stessi title, stessa regola per inizio ed esame passato),
+// ma SENZA la soglia dei 100 giorni: ritorna sempre { gruppo: "giorni", offset, items } con un item per giorno.
+function costruisciGiorni(oggi, esame, inizio) {
+  const eStr = normalizzaISO(esame);
+  if (eStr === null) return { gruppo: "giorni", offset: 0, items: [] };
+  const e = parseISO(eStr);
+  const iStr = normalizzaISO(inizio);
+  const iMs = iStr !== null ? parseISO(iStr) : null;
+  // Senza inizio (o inizio dopo l'esame): da oggi a esame; se l'esame è passato, solo il rombo
+  const s = (iMs !== null && iMs <= e) ? iMs : Math.min(oggi, e);
+  const items = [];
+  for (let t = s; t <= e; t += MS_DAY) {
+    let stato = t < oggi ? "passato" : t === oggi ? "oggi" : "futuro";
+    if (t === e) stato = "esame";
+    items.push({ ms: t, stato, oggi: t === oggi, titolo: titoloGiorno(t, stato, t === oggi) });
+  }
+  return { gruppo: "giorni", offset: indiceSettimana(s), items };
+}
+
+// Righe della griglia: ceil((celle vuote iniziali + giorni) / colonne), più la riga delle lettere se visibile
+function righePallini(offset, giorni, colonne, conLettere) {
+  const c = Number.isFinite(colonne) && colonne >= 1 ? Math.floor(colonne) : COLONNE_PALLINI;
+  const off = Number.isFinite(offset) && offset > 0 ? Math.floor(offset) : 0;
+  const n = Number.isFinite(giorni) && giorni > 0 ? Math.floor(giorni) : 0;
+  return Math.ceil((off + n) / c) + (conLettere ? 1 : 0);
+}
+
+// Diametro (px) dei pallini perché colonne × righe stiano in w × h, con gap = rapportoGap × diametro.
+// Arrotondato per difetto a mezzo pixel, mai sotto "minimo", mai sopra "massimo" (se massimo < minimo vale il minimo).
+function dimensionePallini(w, h, colonne, righe, rapportoGap, minimo, massimo) {
+  const ok = x => typeof x === "number" && Number.isFinite(x);
+  const c = ok(colonne) && colonne >= 1 ? colonne : 1;
+  const r = ok(righe) && righe >= 1 ? righe : 1;
+  const g = ok(rapportoGap) && rapportoGap >= 0 ? rapportoGap : 0.4;
+  const mn = ok(minimo) && minimo > 0 ? minimo : 3;
+  const mx = ok(massimo) && massimo > 0 ? Math.max(massimo, mn) : Infinity;
+  const dw = ok(w) && w > 0 ? w / (c + (c - 1) * g) : 0;
+  const dh = ok(h) && h > 0 ? h / (r + (r - 1) * g) : 0;
+  return Math.max(mn, Math.floor(Math.min(dw, dh, mx) * 2) / 2);
+}
+
+// Layout completo dei pallini nello spazio w × h: prova con la riga delle lettere; se il pallino scende sotto
+// SOGLIA_LETTERE le toglie (e la riga si libera); se anche così sta sotto il minimo, riduce il gap (mai scroll).
+// Ritorna { d, righe, lettere, rapportoGap }.
+function layoutPallini(w, h, offset, giorni, colonne, rapportoGap, minimo, massimo, lettere) {
+  const c = Number.isFinite(colonne) && colonne >= 1 ? colonne : COLONNE_PALLINI;
+  const g0 = Number.isFinite(rapportoGap) && rapportoGap >= 0 ? rapportoGap : 0.4;
+  const mn = Number.isFinite(minimo) && minimo > 0 ? minimo : 3;
+  const prova = (conL, g) => {
+    const righe = righePallini(offset, giorni, c, conL);
+    return { d: dimensionePallini(w, h, c, righe, g, mn, massimo), righe, lettere: conL, rapportoGap: g };
+  };
+  const sta = t => t.d * (c + (c - 1) * t.rapportoGap) <= w + 1e-6 && t.d * (t.righe + (t.righe - 1) * t.rapportoGap) <= h + 1e-6;
+  let t = prova(!!lettere, g0);
+  if (t.lettere && t.d < SOGLIA_LETTERE) t = prova(false, g0);
+  if (!sta(t)) {
+    for (const g of [g0 * 0.6, g0 * 0.3]) {
+      t = prova(t.lettere, g);
+      if (sta(t)) break;
+    }
+  }
+  return t;
+}
+
+// Fattore di scala (0..1) della ruota dei giorni: sta nell'altezza disponibile e nella larghezza massima concessa
+// (rispetto alle dimensioni naturali), ma mai sotto "minimo".
+function scalaRuota(altezzaDisp, altezzaNat, larghezzaMax, larghezzaNat, minimo) {
+  const ok = x => typeof x === "number" && Number.isFinite(x);
+  const mn = ok(minimo) && minimo > 0 && minimo <= 1 ? minimo : 0.4;
+  let k = 1;
+  if (ok(altezzaDisp) && ok(altezzaNat) && altezzaNat > 0) k = Math.min(k, altezzaDisp / altezzaNat);
+  if (ok(larghezzaMax) && ok(larghezzaNat) && larghezzaNat > 0) k = Math.min(k, larghezzaMax / larghezzaNat);
+  return Math.max(mn, Math.floor(k * 100) / 100);
+}
+
 // Casi di test della logica pura (oggi fisso = 10 gennaio 2027). Ritorna [{ nome, ok }]; non è chiamata dal widget.
-// I casi che richiedono DOM/storage (storage bloccato, ?exam=, ?mode=week) si provano nel browser.
+// I casi che richiedono DOM/storage (storage bloccato, ?exam=, ?mode=week) e le misure (adatta) si provano nel browser.
 function provaNewLogic() {
   const O = parseISO("2027-01-10");
   const out = [];
@@ -1096,7 +1406,7 @@ function provaNewLogic() {
     const sel = scegliAppello(ap, O, salvato);
     const num = ap.length > 1 || (ap.length === 1 && ap[0].n === 2);
     const ini = inizioEffettivo(O, inizio || null, { appelli: ap.map(a => a.data), itinere: [date.i1, date.i2].filter(s => s !== null) });
-    const piano = ap.length ? applicaEventi(costruisciPallini(O, ultimaData(ap), ini), costruisciEventi(ap, date, sel, num)) : null;
+    const piano = ap.length ? applicaEventi(costruisciGiorni(O, ultimaData(ap), ini), costruisciEventi(ap, date, sel, num)) : null;
     return { ap, sel, num, piano, ini };
   };
   const base = p => p.items.map(i => [i.ms, i.stato, i.oggi, i.titolo].join("|")).join("#");
@@ -1153,19 +1463,21 @@ function provaNewLogic() {
   // 11. itinere dopo l'ultimo appello: non disegnato
   r = calcola({ esame: "2027-01-20", itinere1: "2027-01-25" }, null, null);
   prova("itinere dopo l'ultimo appello: non disegnato", !r.piano.items.some(i => i.itinere) && r.piano.items.length === 11);
-  // 12. oltre 100 giorni: due appelli nella stessa settimana
+  // 12. oltre 100 giorni: il widget mostra sempre un pallino per giorno (costruisciGiorni)
   r = calcola({ esame: "2027-06-01", esame2: "2027-06-03" }, null, "2027-01-04");
   const dm = diamanti(r.piano);
-  prova("settimane con due appelli nella stessa settimana: due item adiacenti, uno per appello",
-    r.piano.gruppo === "settimane" && dm.length === 2 && r.piano.items.indexOf(dm[1]) === r.piano.items.indexOf(dm[0]) + 1 &&
-    dm[0].appello === 1 && dm[1].appello === 2 && dm[0].ms === dm[1].ms);
-  prova("settimane: i title elencano gli eventi della settimana", /1° appello · 2° appello/.test(dm[0].titolo) && /2° appello · 1° appello/.test(dm[1].titolo));
+  prova("oltre 100 giorni, due appelli vicini: due item distinti sui rispettivi giorni",
+    r.piano.gruppo === "giorni" && dm.length === 2 && dm[0].ms === parseISO("2027-06-01") && dm[1].ms === parseISO("2027-06-03") &&
+    dm[0].appello === 1 && dm[1].appello === 2 && dm[0].ms !== dm[1].ms);
+  prova("giorni: i title riportano il solo appello del giorno", /1° appello/.test(dm[0].titolo) && !/2° appello/.test(dm[0].titolo) && /2° appello/.test(dm[1].titolo) && !/1° appello/.test(dm[1].titolo));
   r = calcola({ esame: "2027-06-01", esame2: "2027-07-20" }, null, "2027-01-04");
-  prova("settimane con appelli in settimane diverse: un rombo per ciascuna", diamanti(r.piano).length === 2);
+  prova("appelli lontani: un rombo ciascuno e un item per giorno",
+    diamanti(r.piano).length === 2 && r.piano.items.length === Math.round((parseISO("2027-07-20") - parseISO("2027-01-04")) / MS_DAY) + 1);
   r = calcola({ esame: "2027-06-01", itinere1: "2027-03-02", itinere2: "2027-03-04" }, null, "2027-01-04");
   const tri = r.piano.items.filter(i => i.itinere);
-  prova("settimane: due itinere nella stessa settimana = un solo triangolo con title doppio",
-    tri.length === 1 && tri[0].eventi.length === 2 && /Itinere 1 · Itinere 2/.test(tri[0].titolo));
+  prova("due itinere vicini: due triangoli su giorni diversi, un evento ciascuno",
+    tri.length === 2 && tri[0].ms === parseISO("2027-03-02") && tri[1].ms === parseISO("2027-03-04") &&
+    tri[0].eventi.length === 1 && tri[1].eventi.length === 1 && /Itinere 1/.test(tri[0].titolo) && /Itinere 2/.test(tri[1].titolo));
   // 13. esame oggi
   r = calcola({ esame: "2027-01-10", esame2: "2027-02-02" }, null, "2027-01-04");
   d1 = r.piano.items.find(i => i.appello === 1);
@@ -1182,39 +1494,164 @@ function provaNewLogic() {
   prova("etichette pillola/aria",
     etichettaPillola(1, "2027-01-12") === "1° · 12 gen" && etichettaPillola(2, "2027-12-02") === "2° · 2 dic" &&
     etichettaAriaAppello(2, "2027-02-02", false) === "2° appello, 2 febbraio 2027, non selezionato");
+  // 16. costruisciGiorni (nessuna soglia dei 100 giorni)
+  const uguali = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  prova("costruisciGiorni == costruisciPallini con meno di 100 giorni (con inizio, senza inizio, inizio dopo l'esame)",
+    uguali(costruisciGiorni(O, "2027-01-20", "2027-01-05"), costruisciPallini(O, "2027-01-20", "2027-01-05")) &&
+    uguali(costruisciGiorni(O, "2027-01-20", null), costruisciPallini(O, "2027-01-20", null)) &&
+    uguali(costruisciGiorni(O, "2027-01-20", "2027-02-01"), costruisciPallini(O, "2027-01-20", "2027-02-01")));
+  prova("costruisciGiorni == costruisciPallini a 100 giorni esatti (ultimo caso a giorni)",
+    uguali(costruisciGiorni(O, "2027-04-19", "2027-01-10"), costruisciPallini(O, "2027-04-19", "2027-01-10")) &&
+    costruisciGiorni(O, "2027-04-19", "2027-01-10").items.length === 100);
+  let gg = costruisciGiorni(O, "2027-12-31", "2027-01-04");
+  prova("oltre 100 giorni: esattamente un item per giorno, consecutivi, offset = lunedì-based del primo giorno",
+    gg.gruppo === "giorni" && gg.items.length === Math.round((parseISO("2027-12-31") - parseISO("2027-01-04")) / MS_DAY) + 1 &&
+    gg.offset === indiceSettimana(parseISO("2027-01-04")) && gg.items.every((it, i) => i === 0 || it.ms - gg.items[i - 1].ms === MS_DAY) &&
+    gg.items[gg.items.length - 1].stato === "esame" && gg.items.filter(i => i.stato === "oggi").length === 1);
+  gg = costruisciGiorni(O, "2027-03-03", "2027-01-06");
+  prova("offset = giorni dal lunedì del primo giorno (mercoledì → 2)", gg.offset === 2);
+  gg = costruisciGiorni(O, "2027-01-03", null);
+  prova("esame passato e senza inizio: solo il rombo", gg.items.length === 1 && gg.items[0].stato === "esame" && gg.items[0].ms === parseISO("2027-01-03") && gg.offset === indiceSettimana(parseISO("2027-01-03")));
+  prova("esame assente o non valido: nessun item", costruisciGiorni(O, null, null).items.length === 0 && costruisciGiorni(O, "2027-02-30", "2027-01-01").items.length === 0);
+  gg = costruisciGiorni(O, "2027-01-10", "2027-01-04");
+  prova("esame oggi: un solo item 'esame' con oggi:true", gg.items[gg.items.length - 1].stato === "esame" && gg.items[gg.items.length - 1].oggi === true);
+
+  // 17. righe e dimensione dei pallini
+  prova("righePallini: ceil((offset + giorni) / 14) più la riga delle lettere",
+    righePallini(0, 20, 14, false) === 2 && righePallini(3, 20, 14, false) === 2 && righePallini(3, 25, 14, false) === 2 &&
+    righePallini(3, 26, 14, false) === 3 && righePallini(0, 200, 14, true) === 16 && righePallini(4, 200, 14, false) === 15 && righePallini(0, 7, 7, true) === 2);
+  prova("dimensionePallini limitato dalla larghezza: 14 colonne in 140px con gap .4 → 7px",
+    dimensionePallini(140, 1000, 14, 3, 0.4, 3, 14) === 7);
+  prova("dimensionePallini: arrotonda per difetto a mezzo pixel (7,6 → 7,5)", dimensionePallini(146, 1000, 14, 3, 0.4, 3, 14) === 7.5);
+  prova("dimensionePallini limitato dall'altezza: 10 righe in 100px → 7px",
+    dimensionePallini(1000, 100, 14, 10, 0.4, 3, 14) === 7);
+  prova("dimensionePallini limitato dal massimo (?size)", dimensionePallini(1000, 1000, 14, 2, 0.4, 3, 14) === 14 && dimensionePallini(1000, 1000, 14, 2, 0.4, 3, 8) === 8);
+  prova("dimensionePallini limitato dal minimo assoluto: mai sotto 3px", dimensionePallini(40, 40, 14, 20, 0.4, 3, 14) === 3 && dimensionePallini(0, 0, 14, 20, 0.4, 3, 14) === 3);
+  prova("dimensionePallini con una sola riga: conta solo la larghezza e l'altezza della riga",
+    dimensionePallini(1000, 20, 7, 1, 0.4, 3, 40) === 20 && dimensionePallini(100, 1000, 7, 1, 0.4, 3, 40) === 10.5 && dimensionePallini(1000, 1000, 7, 1, 0.4, 3, 14) === 14);
+  prova("dimensionePallini: ingressi non validi → minimo; massimo < minimo → minimo",
+    dimensionePallini(NaN, 100, 14, 3, 0.4, 3, 14) === 3 && dimensionePallini(500, 500, 14, 3, 0.4, 3, 2) === 3 && dimensionePallini(500, 500, 14, 3, 0.4, 3, NaN) > 3);
+  let lp = layoutPallini(300, 1000, 0, 20, 14, 0.4, 3, 14, true);
+  prova("layoutPallini: spazio ampio → pallino al massimo, lettere visibili (riga in più)", lp.d === 14 && lp.lettere === true && lp.righe === 3 && lp.rapportoGap === 0.4);
+  lp = layoutPallini(100, 1000, 2, 200, 14, 0.4, 3, 14, true);
+  prova("layoutPallini: pallino sotto 7px → niente lettere e una riga in meno", lp.d === 5 && lp.lettere === false && lp.righe === 15);
+  lp = layoutPallini(40, 40, 0, 200, 14, 0.4, 3, 14, true);
+  prova("layoutPallini: anche al minimo non c'è spazio → gap ridotto, lettere tolte, d = minimo",
+    lp.d === 3 && lp.lettere === false && lp.rapportoGap < 0.4 && lp.righe === 15);
+  lp = layoutPallini(500, 60, 0, 7, 7, 0.4, 3, 40, true);
+  prova("layoutPallini: modalità settimana (7 colonne, una riga di pallini + lettere)", lp.righe === 2 && lp.lettere === true && lp.d === Math.floor(Math.min(60 / 2.4, 500 / 9.4, 40) * 2) / 2);
+  prova("layoutPallini: le dimensioni risultanti stanno sempre nello spazio (quando possibile)",
+    [[120, 200, 0, 90], [200, 80, 3, 120], [333, 421, 5, 365], [90, 90, 1, 30]].every(([w, h, off, n]) => {
+      const l = layoutPallini(w, h, off, n, 14, 0.4, 3, 14, true);
+      return l.d === 3 || (l.d * (14 + 13 * l.rapportoGap) <= w && l.d * (l.righe + (l.righe - 1) * l.rapportoGap) <= h);
+    }));
+
+  // 18. scala della ruota
+  prova("scalaRuota: spazio abbondante → 1; altezza insufficiente → ridotta; larghezza insufficiente → ridotta; mai sotto il minimo",
+    scalaRuota(300, 128, 300, 116, 0.4) === 1 && scalaRuota(64, 128, 300, 116, 0.4) === 0.5 &&
+    scalaRuota(300, 128, 58, 116, 0.4) === 0.5 && scalaRuota(10, 128, 300, 116, 0.4) === 0.4 && scalaRuota(NaN, NaN, NaN, NaN, 0.4) === 1);
+
+  // 19. Parte B: calendario annuale orizzontale
+  const chiavi = m => m.map(x => x.chiave).join(",");
+  let mp = mesiPeriodo("2025-10-01");
+  prova("mesiPeriodo: ottobre 2025 → 10 mesi fino a luglio 2026 (attraversa il cambio anno)",
+    mp.length === 10 && chiavi(mp) === "2025-10,2025-11,2025-12,2026-01,2026-02,2026-03,2026-04,2026-05,2026-06,2026-07" && mp[0].mese === 9 && mp[9].mese === 6 && mp[9].anno === 2026);
+  prova("mesiPeriodo: da diverso da ottobre → parte dal mese di 'da'",
+    chiavi(mesiPeriodo("2026-03-15")) === "2026-03,2026-04,2026-05,2026-06,2026-07,2026-08,2026-09,2026-10,2026-11,2026-12");
+  prova("mesiPeriodo: n diverso (3, 14, 0) e ingressi non validi",
+    chiavi(mesiPeriodo("2025-10-01", 3)) === "2025-10,2025-11,2025-12" && mesiPeriodo("2025-10-01", 14).length === 14 &&
+    mesiPeriodo("2025-10-01", 14)[13].chiave === "2026-11" && mesiPeriodo("2025-10-01", 0).length === 0 &&
+    mesiPeriodo("2025-10-01", 2.5).length === 10 && mesiPeriodo("boh").length === 0 && mesiPeriodo(null).length === 0);
+  prova("estremiMesi: 1 ottobre 2025 – 31 luglio 2026; febbraio bisestile; vuoto → null",
+    JSON.stringify(estremiMesi(mesiPeriodo("2025-10-01"))) === '{"da":"2025-10-01","a":"2026-07-31"}' &&
+    estremiMesi(mesiPeriodo("2027-12-01", 3)).a === "2028-02-29" && estremiMesi([]) === null);
+  prova("confini del periodo: 30 settembre e 1 agosto fuori, 1 ottobre e 31 luglio dentro",
+    (() => {
+      const e = estremiMesi(mesiPeriodo("2025-10-01"));
+      const m = [{ slug: "a", nome: "A", esame: "2025-09-30", esame2: "2025-10-01", itinere1: "2026-07-31", itinere2: "2026-08-01" }];
+      const ev = eventiPerGiorno(m, e.da, e.a);
+      return ev.size === 2 && ev.has(parseISO("2025-10-01")) && ev.has(parseISO("2026-07-31")) && !ev.has(parseISO("2025-09-30")) && !ev.has(parseISO("2026-08-01"));
+    })());
+  prova("leggiParametriAnno: anno 1|2|3 valido, altro → null con attivo; ?mese ignorato",
+    leggiParametriAnno("?anno=2&mese=2026-03").anno === 2 && !("mese" in leggiParametriAnno("?anno=2&mese=2026-03")) &&
+    leggiParametriAnno("?anno=4").anno === null && leggiParametriAnno("?anno=4").attivo === true && leggiParametriAnno("?m=x").attivo === false);
+  // layoutMesi
+  const LA = layoutMesi(1200, 600, 10), LB = layoutMesi(240, 800, 10);
+  prova("layoutMesi: embed 1200×600 → più colonne (5×2), pallini grandi", LA.colonne === 5 && LA.righe === 2 && LA.d >= 20);
+  prova("layoutMesi: 240×800 → 1-2 colonne", LB.colonne <= 2 && LB.d >= 6 && LB.d < LA.d);
+  prova("layoutMesi: l'altezza ridotta limita il diametro", layoutMesi(1200, 250, 10).d < LA.d && layoutMesi(1200, 250, 10).d >= 3);
+  prova("layoutMesi: la larghezza ridotta limita il diametro", layoutMesi(600, 600, 10).d < LA.d);
+  prova("layoutMesi: minimo 3px (spazio insufficiente o ingressi non validi)",
+    layoutMesi(40, 40, 10).d === 3 && layoutMesi(0, 0, 10).d === 3 && layoutMesi(NaN, 100, 10).d === 3);
+  prova("layoutMesi: il diametro non cresce aggiungendo spazio inutile (altezza con 1 colonna stretta, larghezza con altezza fissa)",
+    layoutMesi(200, 3000, 10).d === layoutMesi(200, 6000, 10).d && layoutMesi(4000, 100, 10).d === layoutMesi(8000, 100, 10).d);
+  prova("layoutMesi: spazio enorme → diametro massimo; colonne sempre in 1..n e righe = ceil(n/colonne)",
+    layoutMesi(5000, 5000, 10).d === DIAMETRO_MESI_MAX &&
+    [[1200, 600], [240, 420], [360, 480], [705, 260], [1000, 330], [90, 700]].every(([w, h]) => {
+      const l = layoutMesi(w, h, 10);
+      return l.colonne >= 1 && l.colonne <= 10 && l.righe === Math.ceil(10 / l.colonne);
+    }));
+  prova("layoutMesi: le misure risultanti stanno nello spazio (quando d > 3) e nessun altro d maggiore sta",
+    [[1200, 600], [240, 420], [360, 480], [705, 260], [1000, 330], [500, 500]].every(([w, h]) => {
+      const l = layoutMesi(w, h, 10), m = metricheMese(l.d);
+      const sta = (c, d) => { const q = metricheMese(d), r = Math.ceil(10 / c); return c * q.w + (c - 1) * q.gb <= w && r * q.h + (r - 1) * q.gb <= h; };
+      let meglio = false;
+      for (let c = 1; c <= 10; c++) if (l.d + 0.5 <= DIAMETRO_MESI_MAX && sta(c, l.d + 0.5)) meglio = true;
+      return (l.d === 3 || sta(l.colonne, l.d)) && !meglio && m.d === l.d;
+    }));
+  prova("metricheMese: lettere solo da 7px; righe 6 o 7; etichetta almeno 8px",
+    metricheMese(6.5).lettere === false && metricheMese(6.5).righe === 6 && metricheMese(7).lettere === true && metricheMese(7).righe === 7 &&
+    metricheMese(3).fs === 8 && metricheMese(30).fs === 11);
+  // combinaEventi
+  const ev = (slug, tipo, n) => ({ slug, nome: slug, tipo, n: n || 1 });
+  let cb = combinaEventi([ev("a", "appello")]);
+  prova("combinaEventi: un evento → rombo, una materia, nessun extra", cb.forma === "appello" && cb.materie.length === 1 && cb.materie[0] === "a" && cb.extra === 0);
+  cb = combinaEventi([ev("a", "appello"), ev("b", "appello")]);
+  prova("combinaEventi: due appelli di materie diverse → rombo, due materie", cb.forma === "appello" && cb.materie.join() === "a,b" && cb.extra === 0);
+  cb = combinaEventi([ev("a", "itinere"), ev("b", "itinere", 2)]);
+  prova("combinaEventi: solo itinere → triangolo", cb.forma === "itinere" && cb.materie.join() === "a,b");
+  cb = combinaEventi([ev("a", "itinere"), ev("b", "appello")]);
+  prova("combinaEventi: appello + itinere → rombo, prima la materia dell'appello", cb.forma === "appello" && cb.materie.join() === "b,a");
+  cb = combinaEventi([ev("a", "appello"), ev("b", "appello"), ev("c", "itinere"), ev("d", "itinere")]);
+  prova("combinaEventi: 4 eventi → 3 materie + extra 1", cb.materie.length === 3 && cb.extra === 1 && cb.materie.join() === "a,b,c");
+  cb = combinaEventi([ev("a", "appello", 1), ev("a", "itinere", 1), ev("a", "itinere", 2)]);
+  prova("combinaEventi: la stessa materia più volte conta una", cb.materie.join() === "a" && cb.extra === 0 && cb.forma === "appello");
+  cb = combinaEventi([]);
+  prova("combinaEventi: lista vuota o non valida → forma null", cb.forma === null && cb.materie.length === 0 && cb.extra === 0 && combinaEventi(null).forma === null);
   return out;
 }
 
 // Parte 3: calendari annuali. Mesi numerati 0-11 (come getUTCMonth). Funzioni pure, ms UTC mezzanotte.
 const MESI_LUNGHI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
-// attivo = il parametro anno è presente (anche se non valido → errore); anno = 1|2|3|null
+// attivo = il parametro anno è presente (anche se non valido → errore); anno = 1|2|3|null. Il vecchio ?mese è ignorato.
 function leggiParametriAnno(search) {
   const p = new URLSearchParams(search);
-  const a = (p.get("anno") || "").trim(), m = (p.get("mese") || "").trim();
-  return { attivo: p.has("anno"), anno: /^[123]$/.test(a) ? Number(a) : null, mese: /^\d{4}-(0[1-9]|1[0-2])$/.test(m) ? m : null };
+  const a = (p.get("anno") || "").trim();
+  return { attivo: p.has("anno"), anno: /^[123]$/.test(a) ? Number(a) : null };
 }
 function annoValido(d) {
   return !!d && typeof d === "object" && Array.isArray(d.materie) && !!d.finestra &&
     normalizzaISO(d.finestra.da) !== null && normalizzaISO(d.finestra.a) !== null && parseISO(d.finestra.da) <= parseISO(d.finestra.a);
 }
-function mesiFinestra(da, a) {
-  const d = new Date(parseISO(da)), e = new Date(parseISO(a)), out = [];
+// Gli n mesi (default 10: ottobre-luglio) a partire dal mese di "da" (finestra.da è sempre il 1° ottobre).
+// Ritorna [{anno, mese, chiave}]; "da" non valida o n non intero ≥ 0 → [] / default.
+function mesiPeriodo(da, n = 10) {
+  const iso = normalizzaISO(da);
+  if (iso === null) return [];
+  const cnt = Number.isInteger(n) && n >= 0 ? n : 10;
+  const d = new Date(parseISO(iso)), out = [];
   let y = d.getUTCFullYear(), m = d.getUTCMonth();
-  while (y < e.getUTCFullYear() || (y === e.getUTCFullYear() && m <= e.getUTCMonth())) {
+  for (let i = 0; i < cnt; i++) {
     out.push({ anno: y, mese: m, chiave: y + "-" + String(m + 1).padStart(2, "0") });
     if (++m > 11) { m = 0; y++; }
   }
   return out;
 }
-// Indice del mese da mostrare: richiesto (se nella finestra), poi il corrente, poi il primo/ultimo
-function meseIniziale(mesi, oggi, richiesto) {
-  if (!mesi.length) return -1;
-  let i = richiesto ? mesi.findIndex(x => x.chiave === richiesto) : -1;
-  if (i >= 0) return i;
-  const o = new Date(oggi), k = o.getUTCFullYear() * 12 + o.getUTCMonth();
-  i = mesi.findIndex(x => x.anno * 12 + x.mese === k);
-  if (i >= 0) return i;
-  return k < mesi[0].anno * 12 + mesi[0].mese ? 0 : mesi.length - 1;
+// Primo e ultimo giorno (ISO) coperti da un elenco di mesi di mesiPeriodo; null se vuoto
+function estremiMesi(mesi) {
+  if (!Array.isArray(mesi) || !mesi.length) return null;
+  const p = mesi[0], u = mesi[mesi.length - 1];
+  return { da: formatISO(Date.UTC(p.anno, p.mese, 1)), a: formatISO(Date.UTC(u.anno, u.mese + 1, 0)) };
 }
 // 42 celle (6 settimane, lunedì primo): { ms, giorno }; fuori mese { ms: null, giorno: 0 }
 function costruisciMese(anno, mese) {
@@ -1240,10 +1677,15 @@ function eventiPerGiorno(materie, da, a) {
   });
   return mappa;
 }
-// Prossima data utile (ISO) tra le quattro, >= oggi; null se non c'è
-function prossimaData(m, oggi) {
-  const v = [m && m.esame, m && m.esame2, m && m.itinere1, m && m.itinere2].map(normalizzaISO).filter(s => s !== null && parseISO(s) >= oggi).sort();
-  return v.length ? v[0] : null;
+// Sagoma e spicchi di un giorno con più eventi: forma "appello" (rombo) se c'è almeno un appello, altrimenti "itinere"
+// (triangolo); materie = slug distinti (prima quelli con un appello), al massimo 3; extra = slug distinti oltre i 3.
+// Lista vuota: forma null.
+function combinaEventi(lista) {
+  const l = Array.isArray(lista) ? lista.filter(e => e && typeof e === "object") : [];
+  const forma = !l.length ? null : l.some(e => e.tipo === "appello") ? "appello" : "itinere";
+  const slug = [];
+  l.filter(e => e.tipo === "appello").concat(l.filter(e => e.tipo !== "appello")).forEach(e => { if (!slug.includes(e.slug)) slug.push(e.slug); });
+  return { forma, materie: slug.slice(0, 3), extra: Math.max(0, slug.length - 3) };
 }
 function risolviColore(colore, scuro) { return typeof colore === "string" && /^#[0-9a-fA-F]{6}$/.test(colore.trim()) ? colore.trim() : scegliColore(colore, scuro); }
 function distanzaColori(a, b) {
@@ -1263,17 +1705,45 @@ function intervalloFinestra(da, a) {
   const f = s => { const d = new Date(parseISO(s)); return MESI_ABBR[d.getUTCMonth()] + " " + d.getUTCFullYear(); };
   return f(da) + " – " + f(a);
 }
-function dataBreve(iso) { const d = new Date(parseISO(iso)); return d.getUTCDate() + " " + MESI_ABBR[d.getUTCMonth()]; }
 function etichettaEvento(e) { return e.tipo === "appello" ? etichettaAppello(e.n) : "Itinere " + e.n; }
 function etichettaAriaGiorno(ms, lista) {
   return FMT_DATA.format(ms) + ": " + lista.map(e => e.nome + ", " + etichettaEvento(e).toLowerCase() + (e.conseguita ? " (conseguita)" : "")).join("; ");
+}
+
+// Disposizione dei mesi nel calendario annuale. Dimensioni in px reali (non zoomate).
+const DIAMETRO_MESI_MIN = 3, DIAMETRO_MESI_MAX = 32, RAPPORTO_GAP_MESI = 0.35;
+// Misure di un blocco-mese con pallini di diametro d: gap tra pallini, lettere (solo se d ≥ SOGLIA_LETTERE),
+// righe di pallini (6 + lettere), corpo e altezza dell'etichetta, larghezza e altezza del blocco, gap tra blocchi.
+function metricheMese(d) {
+  const x = typeof d === "number" && Number.isFinite(d) && d > 0 ? d : DIAMETRO_MESI_MIN;
+  const lettere = x >= SOGLIA_LETTERE, g = x * RAPPORTO_GAP_MESI, righe = 6 + (lettere ? 1 : 0);
+  const fs = Math.max(8, Math.min(11, x * 0.85)), lh = Math.ceil(fs * 1.2) + 3;
+  return { d: x, g, lettere, righe, fs, lh, w: 7 * x + 6 * g, h: lh + righe * x + (righe - 1) * g, gb: Math.max(6, Math.min(20, x * 1.4)) };
+}
+// Tra tutte le disposizioni a 1..nMesi colonne sceglie quella che massimizza il diametro dei pallini (a passi di mezzo
+// pixel, da 3 a 32) nell'area w × h; a parità, più colonne. Se non sta nemmeno a 3px ritorna d = 3 (il chiamante non scorre).
+function layoutMesi(w, h, nMesi) {
+  const ok = v => typeof v === "number" && Number.isFinite(v) && v > 0;
+  const n = Number.isInteger(nMesi) && nMesi >= 1 ? nMesi : 10, W = ok(w) ? w : 0, H = ok(h) ? h : 0;
+  let best = null;
+  for (let c = 1; c <= n; c++) {
+    const r = Math.ceil(n / c);
+    let d = DIAMETRO_MESI_MIN;
+    for (let x = DIAMETRO_MESI_MAX; x >= DIAMETRO_MESI_MIN; x -= 0.5) {
+      const m = metricheMese(x);
+      if (c * m.w + (c - 1) * m.gb <= W + 1e-6 && r * m.h + (r - 1) * m.gb <= H + 1e-6) { d = x; break; }
+    }
+    if (!best || d > best.d || (d === best.d && c > best.colonne)) best = { colonne: c, righe: r, d };
+  }
+  return best;
 }
 /* NEWLOGIC-END */
 
 // ---------- Stato, orologio, storage ----------
 const cfg = leggiParametri(location.search);
 const ca = leggiParametriAnno(location.search);
-const sa = { mese: null, sel: null, mesi: null, i: 0 }; // stato del calendario annuale (mese guardato = chiave "YYYY-MM")
+const sa = { sel: null, ev: null, testa: null, periodo: "" }; // stato del calendario annuale (sel = ms del giorno selezionato)
+let ro = null; // ResizeObserver (null se non disponibile)
 const box = document.getElementById("box");
 const radice = document.documentElement;
 const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -1410,10 +1880,17 @@ function pallino(p, appelli) {
   return d;
 }
 function griglia(piano, appelli) {
-  const flusso = piano.gruppo === "settimane";
-  const g = el("div", flusso ? "griglia flusso" : "griglia");
+  const flusso = piano.gruppo === "settimane"; // non prodotto da costruisciGiorni; ramo conservato per i dati "a settimane"
+  const sett = cfg.mode === "week";
+  const col = sett ? 7 : COLONNE_PALLINI; // ?mode=week: una sola riga da 7; altrimenti 14 colonne = due settimane per riga
+  const g = el("div", "griglia" + (flusso ? " flusso" : "") + (sett ? " settimana" : ""));
+  // Dati letti da adatta() per calcolare il diametro: colonne, celle vuote iniziali, numero di giorni
+  g.dataset.col = String(col);
+  g.dataset.off = String(piano.offset);
+  g.dataset.n = String(piano.items.length);
+  g.style.setProperty("--col", String(col));
   if (!flusso) {
-    LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
+    for (let i = 0; i < col; i++) g.append(nascosto(el("div", "gg", LETTERE[i % 7])));
     for (let i = 0; i < piano.offset; i++) g.append(nascosto(el("div", "vuoto")));
   }
   piano.items.forEach(p => g.append(pallino(p, appelli)));
@@ -1491,9 +1968,17 @@ function scheletro() {
   box.setAttribute("aria-label", "Caricamento in corso");
   box.append(el("div", "sk sk-titolo"));
   if (cfg.label) box.append(el("div", "sk sk-testo"));
-  const g = el("div", "griglia");
-  for (let i = 0; i < 7; i++) g.append(el("div", "gg", "\u00a0"));
-  for (let i = 0; i < (cfg.mode === "week" ? 7 : 14); i++) g.append(el("div", "dot sk"));
+  // Stessa struttura del contenuto: blocco in alto, a sinistra la griglia (2 righe da 14, o 7 in ?mode=week), a destra la ruota
+  const sett = cfg.mode === "week";
+  const col = sett ? 7 : COLONNE_PALLINI;
+  const n = sett ? 7 : 2 * COLONNE_PALLINI;
+  const g = el("div", "griglia" + (sett ? " settimana" : ""));
+  g.dataset.col = String(col);
+  g.dataset.off = "0";
+  g.dataset.n = String(n);
+  g.style.setProperty("--col", String(col));
+  for (let i = 0; i < col; i++) g.append(el("div", "gg", "\u00a0"));
+  for (let i = 0; i < n; i++) g.append(el("div", "dot sk"));
   box.append(g);
   const rSk = nascosto(el("div", "ruota-giorni ruota-sk"));
   rSk.append(el("div", "ruota-arco"));
@@ -1504,12 +1989,12 @@ function scheletro() {
   box.append(rSk);
 }
 function errore() {
-  box.className = "box neutro";
+  box.className = "box neutro errore";
   box.setAttribute("aria-label", "Impossibile caricare i dati");
   box.append(el("div", "testo", "Impossibile caricare i dati"));
 }
 
-function disegna() {
+function costruisci() {
   box.replaceChildren();
   box.removeAttribute("aria-busy");
   document.body.classList.toggle("solid", cfg.solid);
@@ -1548,9 +2033,9 @@ function disegna() {
     if (appelli.length) {
       const date = elencaDate(grezzo);
       const ini = inizioEffettivo(oggi, d.inizio, { appelli: appelli.map(a => a.data), itinere: [date.i1, date.i2].filter(s => s !== null) });
-      piano = applicaEventi(costruisciPallini(oggi, ultimaData(appelli), ini), costruisciEventi(appelli, date, selN, numerati));
+      piano = applicaEventi(costruisciGiorni(oggi, ultimaData(appelli), ini), costruisciEventi(appelli, date, selN, numerati));
     } else {
-      piano = costruisciPallini(oggi, esameSel, d.inizio);
+      piano = costruisciGiorni(oggi, esameSel, d.inizio);
     }
     if (piano.items.length) box.append(griglia(piano, selezionabili ? appelli : null));
   }
@@ -1558,6 +2043,63 @@ function disegna() {
   if (st.nota) box.append(el("p", "nota", "dati non aggiornati"));
 }
 
+// Ridisegna e adatta le dimensioni allo spazio reale dell'iframe
+function disegna() {
+  // Calendario annuale: se il focus era su un giorno, dopo il ridisegno torna sullo stesso
+  const f = ca.attivo && box.contains(document.activeElement) ? document.activeElement.dataset.f : null;
+  costruisci();
+  adatta();
+  if (f) { const e = box.querySelector('[data-f="' + f + '"]'); if (e) e.focus(); }
+}
+
+// ---------- Adattamento allo spazio reale dell'iframe ----------
+// Lo spazio si misura con grandezze che NON dipendono dal contenuto delle colonne: altezza del box meno le righe "auto"
+// (testo, pillole, nota) e larghezza del box meno la colonna della ruota. Poi si impostano --rk (ruota), --dp/--rg/--k
+// (pallini) e --hm (altezza del blocco centrale, per centrarlo in verticale). Nessuna di queste cambia le misure
+// lette, quindi non c'è retroazione. Le misure sono in px reali (viewport); con ?zoom i figli del box sono scalati,
+// perciò i valori CSS dentro la griglia valgono diametro / zoom.
+const DIAMETRO_MIN = 3;
+let rafAdatta = 0;
+function pianificaAdatta() {
+  if (rafAdatta) return;
+  rafAdatta = requestAnimationFrame(() => { rafAdatta = 0; adatta(); });
+}
+function adatta() {
+  if (ca.attivo) return adattaAnno();
+  const ruota = box.querySelector(".ruota-giorni");
+  const g = box.querySelector(".griglia");
+  box.classList.toggle("senza-griglia", !g);
+  if (!ruota) { box.style.removeProperty("--hm"); return; }
+  const px = v => parseFloat(v) || 0;
+  const cs = getComputedStyle(box);
+  const innerW = box.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
+  const innerH = box.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom);
+  const righe = cs.gridTemplateRows.split(/\s+/).map(px);
+  const availH = Math.max(0, innerH - (righe[0] || 0) - (righe[1] || 0) - (righe[3] || 0));
+  // Ruota: dimensione naturale (rk = 1), poi ridotta se l'altezza o il 45% della larghezza non bastano
+  ruota.style.setProperty("--rk", "1");
+  const rr = ruota.getBoundingClientRect();
+  const k = scalaRuota(availH, rr.height, innerW * 0.45, rr.width, Math.min(0.4, 0.4 / zoomVal)); // con zoom alto la ruota può scendere di più (resta ≥ 0,4 in px visivi)
+  ruota.style.setProperty("--rk", String(k));
+  let hMed = rr.height * k;
+  if (g) {
+    const colonne = getComputedStyle(box).gridTemplateColumns.split(/\s+/).map(px);
+    const availW = colonne.length > 1 ? colonne[0] : innerW;
+    const n = Number(g.dataset.n) || 0;
+    const L = layoutPallini(availW, availH, Number(g.dataset.off) || 0, n, Number(g.dataset.col) || COLONNE_PALLINI,
+      0.4, DIAMETRO_MIN, Math.min(cfg.size, 40) * zoomVal, true); // ?size = diametro massimo (come prima, in unità zoomate)
+    const dp = L.d / zoomVal;
+    g.style.setProperty("--dp", dp + "px");
+    g.style.setProperty("--rg", String(L.rapportoGap));
+    g.style.setProperty("--k", String(Math.max(0.25, Math.min(2, dp / 14))));
+    g.classList.toggle("senza-gg", !L.lettere);
+    g.classList.toggle("mini", L.d < 8);
+    g.classList.toggle("fitta", n > 120);
+    hMed = Math.max(hMed, L.righe * L.d + (L.righe - 1) * L.d * L.rapportoGap);
+  }
+  if (hMed + 1 < availH) box.style.setProperty("--hm", Math.ceil(hMed) + "px");
+  else box.style.removeProperty("--hm");
+}
 
 // ---------- Parte 3: calendari annuali ----------
 const chiaveAnno = () => "widget-anno:" + ca.anno;
@@ -1602,140 +2144,209 @@ async function caricaAnno() {
   }
   disegna();
 }
+// Struttura comune a scheletro e contenuto: intestazione | area (con i mesi) ; legenda e nota si aggiungono dopo.
+// L'area è osservata (ResizeObserver): se intestazione o legenda cambiano altezza i mesi si riadattano.
+function strutturaAnno() {
+  const testa = el("div", "cal-testa"), area = el("div", "cal-area"), mesi = el("div", "cal-mesi");
+  area.append(mesi);
+  box.append(testa, area);
+  if (ro) ro.observe(area);
+  return { testa, mesi };
+}
 function scheletroAnno() {
-  box.className = "box neutro anno";
+  box.className = "box anno";
   box.setAttribute("aria-busy", "true");
   box.setAttribute("aria-label", "Caricamento in corso");
-  box.append(el("div", "sk sk-cal"), el("div", "sk sk-cal grande"));
+  const S = strutturaAnno();
+  S.testa.append(el("div", "sk sk-testa"));
+  for (let i = 0; i < 10; i++) {
+    const b = el("div", "cal-mese");
+    b.append(el("div", "cal-mlab"), el("div", "sk sk-mgrid"));
+    S.mesi.append(b);
+  }
+  const leg = el("div", "cal-legenda");
+  leg.append(el("div", "sk sk-legbar"));
+  box.append(leg);
 }
-// Marcatore: sagoma dal tipo, riempimento dalla variante v (0..3 = pieno/strisce/metà/anello; da 4 si cicla variando la luminosità)
-function marcatore(e, v, hex) {
+
+// Colore effettivo di una variante: da v4 in poi si cicla la luminosità (più chiaro, più scuro)
+function coloreVariante(hex, v) {
   const t = Math.floor(v / 4) % 3;
-  const m = el("span", "mk mk-" + (e.tipo === "appello" ? "a" : "i") + " v" + (v % 4) + (t ? " t" + t : "") + (e.conseguita ? " conseg" : ""));
-  m.style.setProperty("--mc", hex);
-  return nascosto(m);
+  return t === 1 ? "color-mix(in srgb, " + hex + " 60%, #fff)" : t === 2 ? "color-mix(in srgb, " + hex + " 60%, #000)" : hex;
 }
-function legenda(tit, voci, cls, oggi, mk) {
-  const w = el("div", "cal-legbox" + cls), ul = el("ul", "cal-leg");
-  w.append(nascosto(el("p", "cal-legtit", tit)));
-  ul.setAttribute("aria-label", tit);
-  voci.forEach(x => {
-    const cons = x.conseguita === true, li = el("li", "cal-voce" + (cons ? " conseg" : "")), n = el("span", "cal-nome"), t = el("div", "cal-vtxt");
-    if (cons) n.append(nascosto(el("span", null, "✓ ")));
-    n.append(document.createTextNode((typeof x.nome === "string" && x.nome) || x.slug));
-    if (cons) n.append(el("span", "sr", " (conseguita)"));
-    const p = prossimaData(x, oggi);
-    t.append(n, el("span", "cal-prox", p ? dataBreve(p) : ""));
-    li.append(mk({ slug: x.slug, tipo: "appello", conseguita: false }), t);
-    ul.append(li);
-  });
-  w.append(ul);
+// Pallino di evento: sagoma dal tipo (rombo = appello, triangolo = itinere). Una materia: colore e variante (v) della materia;
+// più materie (max 3): spicchi a conic-gradient. Il contorno e le ombre vengono dal CSS dei pallini delle materie.
+function dotEvento(forma, colori, v) {
+  const d = el("div", "dot ev " + (forma === "appello" ? "esame" : "itinere"));
+  if (colori.length === 1) {
+    d.classList.add("v" + (v % 4));
+    d.style.setProperty("--c", coloreVariante(colori[0], v));
+  } else {
+    d.style.setProperty("--c", colori[0]);
+    const q = 100 / colori.length;
+    d.style.setProperty("--pie", "conic-gradient(" + colori.map((c, i) => c + " 0 " + Math.round((i + 1) * q * 100) / 100 + "%").join(", ") + ")");
+  }
+  return d;
+}
+function campione(forma, hex, v, conseg) {
+  const w = nascosto(el("span", "cal-camp")), d = dotEvento(forma, [hex], v);
+  if (conseg) d.classList.add("conseg");
+  w.append(d);
   return w;
 }
-// Ridisegna senza nuovo fetch; se il focus era nel calendario lo rimette sull'elemento equivalente (o sul titolo)
-function ridisegna(fk) {
-  const dentro = box.contains(document.activeElement);
-  if (fk === undefined && dentro) fk = document.activeElement.dataset.f;
-  disegna();
-  if (!dentro) return;
-  const e = fk ? box.querySelector('[data-f="' + fk + '"]') : null, f = e && !e.disabled ? e : box.querySelector(".cal-titolo");
-  if (f) f.focus();
+function elencoEventi(lista) {
+  return lista.map(e => e.nome + " · " + etichettaEvento(e) + (e.conseguita ? " (conseguita)" : "")).join("; ");
 }
-function vaiMese(delta) {
-  const j = sa.i + delta;
-  if (!sa.mesi || j < 0 || j >= sa.mesi.length) return;
-  sa.mese = sa.mesi[j].chiave; sa.sel = null; // cambiando mese la selezione si azzera
-  ridisegna(delta < 0 ? "prev" : "next");
+
+// Intestazione: "Anno N · periodo"; con un giorno selezionato, data lunga ed eventi di quel giorno
+function aggiornaTesta() {
+  const t = sa.testa;
+  if (!t) return;
+  t.replaceChildren();
+  if (sa.sel !== null && sa.ev && sa.ev.has(sa.sel)) {
+    const txt = elencoEventi(sa.ev.get(sa.sel));
+    t.append(el("b", null, FMT_LUNGA.format(sa.sel)), document.createTextNode(" · " + txt));
+    t.title = FMT_LUNGA.format(sa.sel) + " · " + txt;
+  } else {
+    t.append(el("b", null, "Anno " + ca.anno), document.createTextNode(" · " + sa.periodo));
+    t.removeAttribute("title");
+  }
 }
+// Selezione senza ridisegnare (il focus resta dov'è)
+function aggiornaSelezione() {
+  box.querySelectorAll('.dot[role="button"]').forEach(d => {
+    const on = Number(d.dataset.ms) === sa.sel;
+    d.classList.toggle("sel", on);
+    d.setAttribute("aria-pressed", String(on));
+  });
+  aggiornaTesta();
+}
+function seleziona(ms) {
+  sa.sel = sa.sel === ms ? null : ms;
+  aggiornaSelezione();
+}
+
+function legendaAnno(princ, recu, hex, vv) {
+  const L = el("div", "cal-legenda"), g = el("div", "cal-gruppi");
+  const voce = x => {
+    const nome = (typeof x.nome === "string" && x.nome) || x.slug, cons = x.conseguita === true;
+    const li = el("li", "cal-voce" + (cons ? " conseg" : "")), n = el("span", "cal-nome", nome);
+    li.title = nome + (cons ? " (conseguita)" : "");
+    li.setAttribute("aria-label", li.title);
+    if (cons) n.append(el("span", "sr", " (conseguita)"));
+    li.append(campione("appello", hex[x.slug], vv[x.slug] || 0, cons));
+    if (cons) li.append(nascosto(el("span", "cal-ok", "✓")));
+    li.append(n);
+    return li;
+  };
+  const lista = (voci, tit) => { const ul = el("ul", "cal-voci"); ul.setAttribute("aria-label", tit); voci.forEach(x => ul.append(voce(x))); return ul; };
+  if (princ.length) g.append(lista(princ, "Materie · Anno " + ca.anno));
+  if (recu.length) {
+    const r = el("div", "cal-rec");
+    r.append(el("span", "cal-rec-et", "Da recuperare"), lista(recu, "Da recuperare · Anno " + (ca.anno - 1)));
+    g.append(r);
+  }
+  L.append(g);
+  const key = nascosto(el("div", "cal-key"));
+  [["appello", "appello"], ["itinere", "itinere"]].forEach(([f, t]) => {
+    const k = el("span", "cal-k"), w = el("span", "cal-camp"), d = el("div", "dot ev " + (f === "appello" ? "esame" : "itinere"));
+    w.append(d);
+    k.append(w, t);
+    key.append(k);
+  });
+  L.append(key);
+  return L;
+}
+
 function disegnaAnno() {
-  const oggi = oggiUTC(), d = st.grezzo, fin = d.finestra, mesi = mesiFinestra(fin.da, fin.a);
-  let i = sa.mese ? mesi.findIndex(x => x.chiave === sa.mese) : -1; // il mese guardato sopravvive ai ridisegni
-  if (i < 0) i = meseIniziale(mesi, oggi, ca.mese);
-  const mm = mesi[i];
-  sa.mesi = mesi; sa.i = i; sa.mese = mm.chiave;
+  const oggi = oggiUTC(), d = st.grezzo, mesi = mesiPeriodo(d.finestra.da), est = estremiMesi(mesi);
   const mat = d.materie.filter(x => x && typeof x.slug === "string");
   const rec = x => ca.anno > 1 && x.recupero === true;
-  const ord = mat.filter(x => !rec(x)).concat(mat.filter(rec)), hex = {};
+  const princ = mat.filter(x => !rec(x)), recu = mat.filter(rec), ord = princ.concat(recu), hex = {};
   ord.forEach(x => { hex[x.slug] = risolviColore(x.colore, mq.matches); });
   const vv = assegnaVarianti(ord.map(x => ({ slug: x.slug, hex: hex[x.slug] })));
-  const mk = e => marcatore(e, vv[e.slug] || 0, hex[e.slug]);
-  const ev = eventiPerGiorno(ord, fin.da, fin.a);
+  const ev = eventiPerGiorno(ord, est.da, est.a);
 
-  box.className = "box neutro anno";
+  box.className = "box anno";
   box.setAttribute("aria-label", "Calendario anno " + ca.anno);
-  const testa = el("div", "cal-testa");
-  testa.append(el("b", null, "Anno " + ca.anno), el("span", null, intervalloFinestra(fin.da, fin.a)));
+  const S = strutturaAnno();
+  sa.ev = ev; sa.testa = S.testa; sa.periodo = intervalloFinestra(est.da, est.a);
+  if (sa.sel !== null && !ev.has(sa.sel)) sa.sel = null; // i dati possono essere cambiati
 
-  const bt = (txt, lab, fk, dis, fn, cls) => {
-    const b = el("button", "cal-btn" + (cls || ""), txt);
-    b.type = "button"; b.dataset.f = fk; b.disabled = dis;
-    if (lab) b.setAttribute("aria-label", lab);
-    b.addEventListener("click", fn);
-    return b;
-  };
-  const titolo = el("span", "cal-titolo", MESI_LUNGHI[mm.mese] + " " + mm.anno);
-  titolo.tabIndex = -1;
-  const o = new Date(oggi), chOggi = o.getUTCFullYear() + "-" + String(o.getUTCMonth() + 1).padStart(2, "0");
-  const nav = el("div", "cal-nav");
-  nav.append(bt("‹", "Mese precedente", "prev", i === 0, () => vaiMese(-1)), titolo);
-  if (oggi >= parseISO(fin.da) && oggi <= parseISO(fin.a) && chOggi !== mm.chiave) {
-    nav.append(bt("Oggi", null, "oggi", false, () => { sa.mese = chOggi; sa.sel = null; ridisegna("oggi"); }, " cal-oggi"));
-  }
-  nav.append(bt("›", "Mese successivo", "next", i === mesi.length - 1, () => vaiMese(1)));
-
-  const g = el("div", "cal-griglia");
-  g.setAttribute("role", "group");
-  g.setAttribute("aria-label", titolo.textContent);
-  LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
-  costruisciMese(mm.anno, mm.mese).forEach(c => {
-    if (c.ms === null) { g.append(nascosto(el("div", "cal-cella vuota"))); return; }
-    const lista = ev.get(c.ms) || [];
-    const cella = el("div", "cal-cella" + (c.ms < oggi ? " passata" : "") + (c.ms === oggi ? " oggi" : "") + (sa.sel === c.ms ? " sel" : ""));
-    cella.append(el("span", "cal-num", String(c.giorno)));
-    if (lista.length) {
-      const r = el("span", "cal-mk");
-      lista.slice(0, 3).forEach(e => r.append(mk(e)));
-      cella.append(r);
-      if (lista.length > 3) cella.append(nascosto(el("span", "cal-piu", "+" + (lista.length - 3))));
-      const scegliGiorno = () => { sa.sel = sa.sel === c.ms ? null : c.ms; ridisegna("c" + c.ms); };
-      cella.setAttribute("role", "button");
-      cella.tabIndex = 0;
-      cella.setAttribute("aria-pressed", String(sa.sel === c.ms));
-      cella.setAttribute("aria-label", etichettaAriaGiorno(c.ms, lista));
-      cella.dataset.f = "c" + c.ms;
-      cella.addEventListener("click", scegliGiorno);
-      cella.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); scegliGiorno(); } });
-    }
-    g.append(cella);
-  });
-
-  const det = el("div", "cal-det");
-  det.setAttribute("aria-live", "polite");
-  if (sa.sel !== null && ev.has(sa.sel)) {
-    det.append(el("b", null, FMT_LUNGA.format(sa.sel)));
-    ev.get(sa.sel).forEach(e => {
-      const r = el("div", "cal-riga");
-      r.append(mk(e), document.createTextNode(e.nome + " · " + etichettaEvento(e) + (e.conseguita ? " (conseguita)" : "")));
-      det.append(r);
+  mesi.forEach(m => {
+    const nome = MESI_LUNGHI[m.mese], blocco = el("div", "cal-mese"), lab = nascosto(el("div", "cal-mlab", nome + " " + m.anno));
+    blocco.setAttribute("role", "group");
+    blocco.setAttribute("aria-label", nome + " " + m.anno);
+    lab.dataset.lungo = nome + " " + m.anno;
+    lab.dataset.breve = MESI_ABBR[m.mese] + " " + m.anno;
+    lab.dataset.minimo = MESI_ABBR[m.mese];
+    const g = el("div", "griglia mese fitta");
+    g.style.setProperty("--col", "7");
+    LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
+    costruisciMese(m.anno, m.mese).forEach(c => {
+      if (c.ms === null) { g.append(nascosto(el("div", "vuoto"))); return; }
+      const lista = ev.get(c.ms), isOggi = c.ms === oggi, data = FMT_LUNGA.format(c.ms) + (isOggi ? " (oggi)" : "");
+      let dot;
+      if (!lista) {
+        dot = el("div", "dot " + (isOggi ? "oggi" : c.ms < oggi ? "passato" : "futuro"));
+        dot.title = data;
+      } else {
+        const cb = combinaEventi(lista);
+        dot = dotEvento(cb.forma, cb.materie.map(s => hex[s]), vv[cb.materie[0]] || 0);
+        if (c.ms < oggi) dot.classList.add("att");
+        if (lista.every(e => e.conseguita)) dot.classList.add("conseg");
+        if (isOggi) dot.classList.add("oggi");
+        if (sa.sel === c.ms) dot.classList.add("sel");
+        dot.title = data + ": " + elencoEventi(lista);
+        dot.append(nascosto(el("i", "hit")));
+        dot.setAttribute("role", "button");
+        dot.tabIndex = 0;
+        dot.setAttribute("aria-pressed", String(sa.sel === c.ms));
+        dot.setAttribute("aria-label", etichettaAriaGiorno(c.ms, lista));
+        dot.dataset.ms = String(c.ms);
+        dot.dataset.f = "c" + c.ms;
+        dot.addEventListener("click", () => seleziona(c.ms));
+        dot.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); seleziona(c.ms); } });
+      }
+      g.append(dot);
     });
-  } else det.append(el("span", "cal-aiuto", "Scegli un giorno con un evento"));
-
-  box.append(testa, nav, g, det);
-  const princ = ord.filter(x => !rec(x)), recu = ord.filter(rec);
-  if (princ.length) box.append(legenda("Materie · Anno " + ca.anno, princ, "", oggi, mk));
-  if (recu.length) box.append(legenda("Da recuperare · Anno " + (ca.anno - 1), recu, " rec", oggi, mk));
-  const key = el("div", "cal-key");
-  key.setAttribute("aria-hidden", "true");
-  [["mk-a", "appello"], ["mk-i", "itinere"]].forEach(([c, t]) => { const k = el("span", "cal-k"); k.append(el("span", "mk " + c), t); key.append(k); });
-  box.append(key);
+    blocco.append(lab, g);
+    S.mesi.append(blocco);
+  });
+  aggiornaTesta();
+  if (ord.length) box.append(legendaAnno(princ, recu, hex, vv)); // JSON vuoto: calendario senza legenda
   if (st.nota) box.append(el("p", "nota", "dati non aggiornati"));
 }
-// Frecce sinistra/destra e Esc quando il focus è nel calendario
+
+// Disposizione dei mesi: l'area si ricava dalle grandezze del box (non zoomato), non dal contenuto dei mesi:
+// larghezza interna e altezza della riga 2 della griglia del box (1fr). Valori in px reali; con ?zoom i figli del box
+// sono scalati, quindi i valori CSS dentro i mesi valgono px / zoom (come per il widget per materia).
+function adattaAnno() {
+  const mesi = box.querySelector(".cal-mesi");
+  if (!mesi) return;
+  const px = v => parseFloat(v) || 0, cs = getComputedStyle(box);
+  const W = box.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
+  const H = cs.gridTemplateRows.split(/\s+/).map(px)[1] || 0;
+  const L = layoutMesi(W, H, mesi.children.length), M = metricheMese(L.d), z = zoomVal;
+  mesi.style.setProperty("--mc", String(L.colonne));
+  mesi.style.setProperty("--dp", L.d / z + "px");
+  mesi.style.setProperty("--rg", String(RAPPORTO_GAP_MESI));
+  mesi.style.setProperty("--k", String(Math.max(0.25, Math.min(2, L.d / z / 14))));
+  mesi.style.setProperty("--fs", M.fs / z + "px");
+  mesi.style.setProperty("--lh", M.lh / z + "px");
+  mesi.style.setProperty("--gb", M.gb / z + "px");
+  mesi.classList.toggle("senza-gg", !M.lettere);
+  mesi.classList.toggle("mini", L.d < 8);
+  mesi.querySelectorAll(".cal-mlab").forEach(lab => {
+    if (!lab.dataset.lungo) return;
+    const stima = M.fs * 0.74, t = stima * lab.dataset.lungo.length <= M.w ? lab.dataset.lungo : stima * lab.dataset.breve.length <= M.w ? lab.dataset.breve : lab.dataset.minimo;
+    if (lab.textContent !== t) lab.textContent = t;
+  });
+}
+// Esc deseleziona il giorno
 box.addEventListener("keydown", e => {
   if (!ca.attivo || st.fase !== "ok") return;
-  if (e.key === "ArrowLeft") { e.preventDefault(); vaiMese(-1); }
-  else if (e.key === "ArrowRight") { e.preventDefault(); vaiMese(1); }
-  else if (e.key === "Escape" && sa.sel !== null) { sa.sel = null; ridisegna(); }
+  if (e.key === "Escape" && sa.sel !== null) { sa.sel = null; aggiornaSelezione(); }
 });
 
 // ---------- Timer e avvio ----------
@@ -1744,11 +2355,15 @@ function pianifica() {
   st.timer = setTimeout(() => { carica(); pianifica(); }, msAllaMezzanotte(Date.now()));
 }
 
-radice.style.setProperty("--d", "clamp(8px, " + cfg.size + "px, 28px)");
+radice.classList.add(ca.attivo ? "vista-anno" : "vista-materia");
 // Zoom opzionale (?zoom=1.4): valori non validi o assenti = 1; limitato tra 0.5 e 3
 const zoomRaw = Number((new URLSearchParams(location.search).get("zoom") || "").replace(",", "."));
-radice.style.setProperty("--z", String(Number.isFinite(zoomRaw) && zoomRaw > 0 ? Math.min(Math.max(zoomRaw, 0.5), 3) : 1));
+const zoomVal = Number.isFinite(zoomRaw) && zoomRaw > 0 ? Math.min(Math.max(zoomRaw, 0.5), 3) : 1;
+radice.style.setProperty("--z", String(zoomVal));
 disegna(); // scheletro
+// Ridimensionamento dell'iframe a runtime (l'altezza la sceglie l'utente in Notion): si riadatta, una volta per frame
+if (typeof ResizeObserver === "function") { ro = new ResizeObserver(pianificaAdatta); ro.observe(box); }
+window.addEventListener("resize", pianificaAdatta);
 carica();
 pianifica();
 
