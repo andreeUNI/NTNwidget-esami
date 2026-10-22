@@ -2176,7 +2176,7 @@ function scheletroAnno() {
   box.setAttribute("aria-label", "Caricamento in corso");
   const S = strutturaAnno();
   S.testa.append(el("div", "sk sk-testa"));
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 11; i++) {
     const b = el("div", "cal-mese");
     b.append(el("div", "cal-mlab"), el("div", "sk sk-mgrid"));
     S.mesi.append(b);
@@ -2276,7 +2276,9 @@ function legendaAnno(princ, recu, hex, vv) {
 }
 
 function disegnaAnno() {
-  const oggi = oggiUTC(), d = st.grezzo, mesi = mesiPeriodo(d.finestra.da), est = estremiMesi(mesi);
+  const oggi = oggiUTC(), d = st.grezzo, mesi = mesiPeriodo(d.finestra.da);
+  if (mesi.length) { const u = mesi[mesi.length - 1]; mesi.push({ anno: u.anno, mese: 8, chiave: u.anno + "-09" }); } // + settembre (senza agosto)
+  const est = estremiMesi(mesi);
   const mat = d.materie.filter(x => x && typeof x.slug === "string");
   const rec = x => ca.anno > 1 && x.recupero === true;
   const princ = mat.filter(x => !rec(x)), recu = mat.filter(rec), ord = princ.concat(recu), hex = {};
