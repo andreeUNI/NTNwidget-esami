@@ -89,25 +89,24 @@ body {
   color: var(--text);
 }
 /* Vista materia: il box è alto quanto l'iframe (mai di più: è questo che evita lo scroll).
-   Righe: 1 riquadro .testo | 2 pillole | 3 colonne (pallini a sinistra, ruota a destra) | 4 nota.
-   La riga 3 è minmax(0, 1fr): il suo spazio non dipende dal contenuto, quindi si può misurare senza cicli di retroazione.
-   JS imposta --hm (altezza del contenuto delle colonne) quando avanza spazio, così il blocco resta centrato in verticale. */
+   Un unico gruppo ORIZZONTALE di 3 colonne [riquadro | pillole + mesi | ruota], centrato in orizzontale e in verticale.
+   Le larghezze (--w1/--w2/--w3, --gap) le calcola JS (layoutMateria) da misure che non dipendono dal contenuto delle colonne:
+   nessuna retroazione. Riga 1 = colonne (altezza --hm quando avanza spazio, così il gruppo resta centrato), riga 2 = nota. */
 .box:not(.anno) {
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto auto minmax(0, var(--hm, 1fr)) auto;
-  align-items: center;
+  grid-template-columns: var(--w1, auto) var(--w2, auto) var(--w3, auto);
+  grid-template-rows: minmax(0, var(--hm, 1fr)) auto;
+  justify-content: center;
   align-content: center;
-  justify-content: stretch;
+  align-items: center;
   justify-items: center;
-  column-gap: clamp(8px, 3vw, 18px);
+  column-gap: var(--gap, 12px);
+  row-gap: 0;
 }
 .box.errore {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto;
-}
-  column-gap: clamp(8px, 3vw, 18px);
 }
 .box.neutro {
   border-color: color-mix(in srgb, var(--text) 22%, rgba(255, 255, 255, 0.25));
@@ -127,127 +126,87 @@ body {
   display: none !important;
 }
 
-/* Disposizione: .testo in alto al centro (largo come le due colonne), pillole sotto, poi le due colonne */
-.testo,
-.sk-testo {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  justify-self: center;
-}
-.appelli {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  justify-self: center;
-}
-.griglia {
-  grid-column: 1;
-  grid-row: 3;
-  justify-self: center;
-  align-self: center;
-}
-
-/* Riquadro superiore stile Icona Calendario 3D macOS/iOS */
+/* Riquadro del conto alla rovescia (colonna 1): pagina di calendario in vetro tinto dal colore della materia.
+   Tutte le misure sono in em: JS scala l'intero riquadro con --ck (0,5-1) sul font-size.
+   Colori: testi con var(--text)/var(--soft) (contrasto alto in chiaro e scuro); l'accento --cal-* sta solo sulla calotta e il
+   numero grande usa var(--text), perché --cal-text (#D91B1B) sullo scuro ha contrasto scarso. Niente bianco puro. */
 .testo {
+  --lastra: rgba(255, 255, 255, 0.62);
+  --lastra2: rgba(244, 246, 249, 0.46);
+  --anello: #F1F3F6;
+  --ombra: rgba(30, 35, 45, 0.22);
   position: relative;
   isolation: isolate;
-  margin: 6px 0 8px;
-  /* Più allungato di prima: largo 200-320px (mai oltre l'area interna) e con più respiro in verticale */
-  width: min(100%, clamp(200px, 40vw, 320px));
-  padding: 17px 18px 11px;
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 9.5em;
+  max-width: 17em;
+  margin: .4em 0 .15em;
+  padding: 1.6em .9em .8em;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  max-width: 100%;
-  box-sizing: border-box;
-  border-radius: 14px;
-  font-size: 12.5px;
+  gap: .2em;
+  font-size: calc(var(--ck, 1) * 14px);
   font-weight: 700;
   line-height: 1.25;
-  color: #23262B;
+  color: var(--text);
   overflow-wrap: anywhere;
-  /* Calotta superiore colorata + fallback lastra vitrea inferiore */
+  border-radius: .9em;
   background:
-    linear-gradient(135deg, var(--cal-start) 0%, var(--cal-end) 100%) 0 0 / 100% 16px no-repeat,
-    radial-gradient(
-      115% 70% at 50% 10px,
-      color-mix(in srgb, var(--cal-end) 24%, rgba(255, 255, 255, 0.94)) 0%,
-      rgba(255, 255, 255, 0.94) 55%,
-      rgba(224, 238, 249, 0.96) 100%
-    );
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  backdrop-filter: blur(12px) saturate(150%);
+    linear-gradient(135deg, var(--cal-start) 0%, var(--cal-end) 100%) 0 0 / 100% 1.1em no-repeat,
+    linear-gradient(165deg, color-mix(in srgb, var(--c) 16%, var(--lastra)) 0%, color-mix(in srgb, var(--c) 9%, var(--lastra2)) 100%);
+  border: 1px solid color-mix(in srgb, var(--c) 38%, rgba(255, 255, 255, 0.3));
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
   box-shadow:
-    0 6px 16px -2px color-mix(in srgb, var(--cal-end) 26%, rgba(0, 0, 0, 0.28)),
-    0 2px 5px rgba(0, 0, 0, 0.14),
-    inset 0 1px 1px rgba(255, 255, 255, 0.45),
-    inset 0 -1.5px 2px rgba(165, 190, 215, 0.55);
+    0 .4em 1em -.2em color-mix(in srgb, var(--c) 28%, var(--ombra)),
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.08);
 }
-
-/* Anelli/Ganci verticali bianchi superiori a forma di pillola */
+/* Anelli a pillola della pagina di calendario (più sottili di prima) */
 .testo::before,
 .testo::after {
   content: "";
   position: absolute;
-  top: -5px;
-  width: 6.5px;
-  height: 11.5px;
+  top: -.3em;
+  width: .42em;
+  height: .8em;
   border-radius: 999px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F2F6FA 68%, #D5DEE8 100%);
-  box-shadow:
-    0 2px 2.5px rgba(0, 0, 0, 0.32),
-    0 0 0 0.5px rgba(0, 0, 0, 0.08),
-    inset 0 1px 1px #FFFFFF,
-    inset 0 -1px 1px rgba(140, 160, 180, 0.55);
+  background: linear-gradient(180deg, var(--anello), color-mix(in srgb, var(--anello) 70%, #8892A0));
+  box-shadow: 0 1px 2px var(--ombra), 0 0 0 .5px rgba(0, 0, 0, 0.1);
   transform: translateX(-50%);
   z-index: 2;
   pointer-events: none;
 }
-.testo::before {
-  left: 28%;
-}
-.testo::after {
-  left: 72%;
-}
-
-/* Lastra frontale in vetro ghiaccio con color bleed e bordo speculare 3D */
-.testo .principale::before {
-  content: "";
-  position: absolute;
-  inset: 9px 0 0 0;
-  border-radius: 12px 12px 13px 13px;
-  background:
-    radial-gradient(
-      115% 68% at 50% 0%,
-      color-mix(in srgb, var(--cal-end) 25%, rgba(255, 255, 255, 0.92)) 0%,
-      color-mix(in srgb, var(--cal-start) 10%, rgba(255, 255, 255, 0.94)) 42%,
-      rgba(244, 249, 253, 0.96) 70%,
-      rgba(222, 236, 248, 0.98) 100%
-    );
-  box-shadow:
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
-    inset 0 -1.5px 2.5px rgba(170, 195, 220, 0.5),
-    0 -1px 2.5px rgba(0, 0, 0, 0.14);
-  z-index: -1;
-  pointer-events: none;
-}
-
-.testo .principale {
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 1.25;
-  color: var(--cal-text);
-  letter-spacing: -0.01em;
-}
-.testo .data {
+.testo::before { left: 28%; }
+.testo::after { left: 72%; }
+/* Gerarchia: numero protagonista (~2,9 volte il corpo base: 3,41em × .85em), suffisso piccolo, poi appello e data */
+.testo .principale { font-size: .85em; font-weight: 700; line-height: 1.2; color: var(--soft); }
+.testo .principale .num {
+  display: block;
+  font-size: 3.41em;
   font-weight: 800;
-  font-size: 13.5px;
-  line-height: 1.2;
-  color: #23262B;
-  letter-spacing: -0.015em;
+  line-height: 1;
+  margin-bottom: .06em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+  white-space: nowrap;
+  color: var(--text);
 }
+.testo .principale.medio { font-size: 1.5em; font-weight: 800; line-height: 1.15; color: var(--text); }
+.testo .appello { font-size: .95em; font-weight: 700; line-height: 1.2; color: var(--text); }
+.testo .data { font-size: 1em; font-weight: 800; line-height: 1.2; letter-spacing: -.015em; color: var(--text); }
+@media (prefers-color-scheme: dark) {
+  .testo {
+    --lastra: rgba(34, 36, 42, 0.6);
+    --lastra2: rgba(24, 26, 30, 0.5);
+    --anello: #B9BEC7;
+    --ombra: rgba(0, 0, 0, 0.5);
+  }
+}
+
 .nota {
   grid-column: 1 / -1;
   margin: 8px 0 0;
@@ -255,10 +214,10 @@ body {
   line-height: 1.3;
   color: var(--soft);
 }
-.box:not(.anno) .nota { grid-row: 4; }
+.box:not(.anno) .nota { grid-row: 2; }
 
-/* Griglia a 14 colonne (due settimane per riga). Il diametro --dp lo calcola JS (adatta) sullo spazio disponibile;
-   ?size è solo il massimo. Le righe hanno altezza = diametro, così l'altezza della griglia è deterministica. */
+/* Griglia dei pallini (?mode=week e ramo "flusso"; i mesi della vista materia usano .griglia.mese dentro .mesi-materia). Il diametro --dp lo calcola JS;
+   le righe hanno altezza = diametro, così l'altezza della griglia è deterministica. */
 .griglia {
   --gp: calc(var(--dp) * var(--rg));
   --b1: max(1px, calc(1px * var(--k)));
@@ -509,14 +468,6 @@ body {
     );
 }
 
-/* Dicitura "al 1° appello" nel riquadro calendario (fondo sempre chiaro: testo scuro fisso, come .principale/.data) */
-.testo .appello {
-  font-weight: 700;
-  font-size: 10.5px;
-  line-height: 1.2;
-  color: #4B5059;
-}
-
 /* Pillole di scelta dell'appello (centrate sotto .testo): bersagli di tocco più comodi dei rombi */
 .appelli {
   display: flex;
@@ -570,13 +521,11 @@ body {
   background: currentColor;
 }
 
-/* Colonna 2 (Destra): Indicatore Circolare ad Arco Glassmorph (.ruota-giorni), centrato in verticale nello spazio delle colonne.
-   Dimensione naturale = --ruota-w × --ruota-h; JS la riduce con --rk (zoom) se l'altezza o la larghezza disponibili non bastano. */
+/* Ruota dei giorni (colonna 3). Ingombro naturale --ruota-w × --ruota-h; JS la scala con --rk.
+   L'arco visibile (maschera 20°-160°) parte a ~0,04 × --arc-r dal bordo sinistro: la parte che "sporge" a sinistra è trasparente. */
 .ruota-giorni {
-  grid-column: 2;
-  grid-row: 3;
-  align-self: center;
   position: relative;
+  flex: none;
   width: var(--ruota-w);
   height: var(--ruota-h);
   display: flex;
@@ -586,11 +535,6 @@ body {
   filter:
     drop-shadow(0 4px 10px rgba(0, 0, 0, 0.28))
     drop-shadow(0 1px 3px color-mix(in srgb, var(--c) 35%, rgba(0, 0, 0, 0.2)));
-}
-/* Senza pallini (es. data esame non impostata) la ruota sta al centro */
-.box.senza-griglia > .ruota-giorni {
-  grid-column: 1 / -1;
-  justify-self: center;
 }
 
 /* Linea circolare sottile in vetro sull'emisfero destro */
@@ -745,7 +689,7 @@ body {
   animation: sk 1.6s ease-in-out infinite;
 }
 .sk-titolo { font-size: 15px; height: 1.3em; width: 45%; border-radius: 4px; }
-.sk-testo { font-size: 13px; height: 62px; width: min(100%, clamp(200px, 40vw, 320px)); margin: 6px 0 0; border-radius: 14px; }
+.sk-testo { font-size: calc(var(--ck, 1) * 14px); height: 7em; width: 10em; margin: .4em 0 .15em; border-radius: .9em; }
 .ruota-sk .giorno-focus {
   width: 38px;
   height: 32px;
@@ -758,50 +702,22 @@ body {
 .box > * {
   zoom: var(--z, 1);
 }
-/* La ruota combina lo zoom dell'utente (--z) con la riduzione automatica (--rk) */
-.box > .ruota-giorni {
-  zoom: calc(var(--z, 1) * var(--rk, 1));
-}
+/* La ruota combina lo zoom dell'utente (--z, sulla colonna) con la riduzione automatica (--rk) */
+.col-ruota > .ruota-giorni { zoom: var(--rk, 1); }
 
-/* Calibrazione per larghezze strette (~240px) senza alcun overflow o scroll.
-   Il padding del box non cambia più qui: lo governa --margine (12px a 240px). */
+/* Larghezze strette (~240px): ruota più piccola; il resto lo scala JS */
 @media (max-width: 265px) {
-  :root {
-    --arc-r: 58px;
-    --ruota-w: 86px;
-  }
-  .box:not(.anno) {
-    column-gap: 6px;
-  }
-  .testo {
-    padding: 14px 10px 8px;
-  }
-  .testo .principale {
-    font-size: 11px;
-  }
-  .testo .data {
-    font-size: 12px;
-  }
+  :root { --arc-r: 58px; --ruota-w: 86px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dot.oggi, .sk { animation: none; }
 }
 
-/* Parte 2: pillole e dicitura più compatte a ~240px (le pillole vanno a capo se serve) */
+/* Pillole più compatte a ~240px (vanno a capo se serve) */
 @media (max-width: 265px) {
-  .appelli {
-    gap: 3px;
-    margin-bottom: 6px;
-  }
-  .pillola {
-    padding: 3px 6px;
-    gap: 4px;
-    font-size: 10.5px;
-  }
-  .testo .appello {
-    font-size: 10px;
-  }
+  .appelli { gap: 3px; }
+  .pillola { padding: 3px 6px; gap: 4px; font-size: 10.5px; }
 }
 
 /* ===== Parte 3: calendari annuali (?anno=1|2|3): tutti i mesi insieme, in orizzontale ===== */
@@ -1044,6 +960,49 @@ body {
 .cal-mesi:not(.senza-gg) .sk-mgrid { height: calc(var(--dp) * 7 + var(--gp) * 6); }
 .sk-legbar { height: 1.2em; width: 55%; border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { .box.anno::before { animation: none; } }
+
+/* ===== Vista materia a 3 colonne ===== */
+.col-conto, .col-mesi, .col-ruota { min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.box:not(.anno) > .col-conto, .box:not(.anno) > .col-mesi, .box:not(.anno) > .col-ruota { grid-row: 1; }
+.box.no-conto { grid-template-columns: var(--w2) var(--w3); }
+.box.no-mesi { grid-template-columns: var(--w1) var(--w3); }
+.box.no-conto.no-mesi { grid-template-columns: var(--w3); }
+/* Modo impilato (larghezze strette): riquadro (+ ruota se avanza spazio) in alto, poi pillole e mesi a tutta larghezza */
+.box.impilato { grid-template-columns: var(--w1) var(--w3); grid-template-rows: auto auto auto; row-gap: var(--gv, 8px); }
+.box.impilato.no-ruota, .box.impilato.no-conto { grid-template-columns: var(--w1); }
+.box.impilato > .col-conto { grid-column: 1; grid-row: 1; }
+.box.impilato > .col-ruota { grid-column: 2; grid-row: 1; }
+.box.impilato > .col-mesi { grid-column: 1 / -1; grid-row: 2; justify-self: center; width: max-content; }
+.box.impilato .nota { grid-row: 3; }
+.box.no-ruota > .col-ruota { display: none; } /* solo nel modo impilato: la ruota è decorativa e aria-hidden */
+.col-mesi .appelli { width: max-content; max-width: 100%; }
+.pillola { background: color-mix(in srgb, var(--c) 8%, transparent); }
+.pillola.sel { background: color-mix(in srgb, var(--c) 38%, transparent); }
+
+/* Mesi della vista materia: stessa struttura DOM dell'annuale (.cal-mese, .cal-mlab, .griglia.mese) ma con i colori della materia (--c) */
+.mesi-materia {
+  --dp: 8px; --rg: .35; --k: .6; --gp: calc(var(--dp) * var(--rg)); --gb: 8px; --mc: 5;
+  display: grid;
+  grid-template-columns: repeat(var(--mc), max-content);
+  gap: var(--gb);
+  justify-content: center;
+  align-content: center;
+  width: max-content;
+}
+.mesi-materia.mini .griglia { --sr: .85; }
+.mesi-materia.senza-gg .gg { display: none; }
+.mesi-materia:not(.senza-gg) .sk-mgrid { height: calc(var(--dp) * 7 + var(--gp) * 6); }
+/* Giorni dopo l'appello più lontano: punto piccolo molto tenue (forma diversa da .futuro, che è un anello), non interattivo */
+.dot.fuori {
+  background: var(--c);
+  border: 0;
+  box-shadow: none;
+  opacity: .2;
+  transform: scale(.4);
+  pointer-events: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 </style>
 </head>
 <body>
@@ -1755,6 +1714,103 @@ function layoutMesi(w, h, nMesi) {
   return best;
 }
 /* NEWLOGIC-END */
+/* LAYOUT3-START */
+// Vista materia a 3 colonne. Solo funzioni pure: niente DOM, storage o orologio di sistema. Misure in px reali (non zoomate).
+const RAPPORTO_COL2 = 1.25, SOGLIA_IMPILATO = 5.5, GUADAGNO_IMPILATO = 1.3, ISTERESI_LAYOUT = 0.08;
+// W × H = area interna del box (meno la nota). o = { conto:{w,h}, ruota:{w,h}, pillole:{w,h,g,rg}, senzaMesi, settimana, maxD, prev }
+// con le misure NATURALI (scala 1) di riquadro, ruota e riga di pillole. Ritorna { modo, w1, w2, w3, gap, gv, ck, rk, d, colonne,
+// righe, lettere, rg, mostraRuota, hMed, valido }: modo "orizzontale" | "impilato"; ck/rk = scala di riquadro e ruota.
+function layoutMateria(W, H, nMesi, o) {
+  const ok = v => typeof v === "number" && Number.isFinite(v);
+  o = o || {};
+  W = ok(W) && W > 0 ? W : 0; H = ok(H) && H > 0 ? H : 0;
+  const n1 = o.conto || null, n3 = o.ruota || null, pill = o.pillole || null, hasM = !o.senzaMesi;
+  const maxD = ok(o.maxD) && o.maxD > 0 ? o.maxD : 40, nm = Math.max(1, nMesi | 0);
+  const gap = Math.min(28, Math.max(10, W * 0.025)), gv = n1 ? Math.min(gap, 10) : 0;
+  const hp = w => (!pill || !hasM) ? 0 : (pill.w > w + 1e-6 ? 2 * pill.h + pill.rg : pill.h) + pill.g;
+  // mesi (o la settimana) in w × h
+  const blocco = (w, h) => {
+    if (!hasM) return { d: 0, colonne: 0, righe: 0, lettere: false, rg: RAPPORTO_GAP_MESI, w: 0, h: 0 };
+    if (o.settimana) {
+      const L = layoutPallini(w, h, 0, 7, 7, 0.4, DIAMETRO_MESI_MIN, maxD, true);
+      return { d: L.d, colonne: 7, righe: L.righe, lettere: L.lettere, rg: L.rapportoGap, w: L.d * (7 + 6 * L.rapportoGap), h: L.d * (L.righe + (L.righe - 1) * L.rapportoGap) };
+    }
+    const L = layoutMesi(w, h, nm), d = Math.max(DIAMETRO_MESI_MIN, Math.min(L.d, Math.floor(maxD * 2) / 2)), M = metricheMese(d);
+    return { d, colonne: L.colonne, righe: L.righe, lettere: M.lettere, rg: RAPPORTO_GAP_MESI, w: L.colonne * M.w + (L.colonne - 1) * M.gb, h: L.righe * M.h + (L.righe - 1) * M.gb };
+  };
+  const orizz = () => {
+    let ck = n1 ? scalaRuota(H, n1.h, 0.28 * W, n1.w, 0.5) : 1;
+    let rk = n3 ? scalaRuota(Math.min(H, n1 ? n1.h * ck : H), n3.h, 0.24 * W, n3.w, 0.4) : 1;
+    const gaps = ((n1 ? 1 : 0) + (hasM ? 1 : 0) + (n3 ? 1 : 0) - 1) * gap;
+    let w1 = 0, w3 = 0, w2 = 0;
+    for (let i = 0; i < 60; i++) { // riduce le colonne laterali finché la colonna 2 è almeno 1,25 volte la maggiore
+      w1 = n1 ? n1.w * ck : 0; w3 = n3 ? n3.w * rk : 0; w2 = hasM ? W - w1 - w3 - gaps : 0;
+      if (!hasM || w2 >= RAPPORTO_COL2 * Math.max(w1, w3) - 1e-6 || (ck <= 0.5 && rk <= 0.4)) break;
+      ck = Math.max(0.5, ck * 0.96); rk = Math.max(0.4, rk * 0.96);
+    }
+    const valido = !hasM || w2 >= RAPPORTO_COL2 * Math.max(w1, w3) - 1e-6;
+    const b = blocco(Math.max(0, w2), Math.max(0, H - hp(w2)));
+    // colonna 2 = larghezza reale dei mesi (non si stira), ma mai sotto 1,25 × la maggiore delle laterali; l'avanzo è margine uguale ai due lati
+    const w2r = hasM ? Math.max(b.w, pill ? Math.min(pill.w, w2) : 0, Math.min(w2, RAPPORTO_COL2 * Math.max(w1, w3))) : 0;
+    return { modo: "orizzontale", valido, w1, w2: w2r, w3, gap, gv: 0, ck, rk, d: b.d, colonne: b.colonne, righe: b.righe, lettere: b.lettere, rg: b.rg,
+      mostraRuota: !!n3, hMed: Math.max(n1 ? n1.h * ck : 0, hasM ? hp(w2) + b.h : 0, n3 ? n3.h * rk : 0) };
+  };
+  const impil = () => {
+    const hMax = hasM ? 0.4 * H : H;
+    let ck = n1 ? scalaRuota(hMax, n1.h, W, n1.w, 0.5) : 1, rk = 1, mostra = false;
+    if (n1 && n3) { // la ruota compare solo se avanza spazio (>= 50% della sua altezza), a lato del riquadro
+      const r = Math.min(1, n1.h * ck / n3.h);
+      if (r >= 0.5) {
+        const c2 = scalaRuota(hMax, n1.h, W - gap - n3.w * r, n1.w, 0.5);
+        if (n1.w * c2 + gap + n3.w * r <= W + 1e-6) { ck = c2; rk = r; mostra = true; }
+      }
+    }
+    const w1 = n1 ? n1.w * ck : 0, w3 = mostra ? n3.w * rk : 0;
+    const rowH = Math.max(n1 ? n1.h * ck : 0, mostra ? n3.h * rk : 0), gg = n1 && hasM ? gv : 0;
+    const b = blocco(W, Math.max(0, H - rowH - gg - hp(W)));
+    const w2r = hasM ? Math.max(b.w, pill ? Math.min(pill.w, W) : 0) : 0;
+    return { modo: "impilato", valido: true, w1, w2: w2r, w3, gap, gv: gg, ck, rk, d: b.d, colonne: b.colonne, righe: b.righe, lettere: b.lettere, rg: b.rg,
+      mostraRuota: mostra, hMed: rowH + gg + (hasM ? hp(W) + b.h : 0) };
+  };
+  const O = orizz();
+  if (!hasM) return O;
+  const I = impil(), dO = O.valido ? O.d : 0, f = ISTERESI_LAYOUT, imp0 = o.prev === "impilato";
+  // passa a impilato se in orizzontale d < ~5,5px E l'impilato dà almeno +30%; isteresi 8% contro lo sfarfallio
+  const vai = dO < SOGLIA_IMPILATO * (imp0 ? 1 + f : 1) && I.d >= dO * GUADAGNO_IMPILATO * (imp0 ? 1 - f : 1);
+  return vai ? I : O;
+}
+
+// Casi di test di layoutMateria. Ritorna [{ nome, ok }]; non è chiamata dal widget.
+function provaLayout3() {
+  const out = [], prova = (nome, ok) => out.push({ nome, ok: !!ok });
+  const C = { w: 190, h: 125 }, R = { w: 116, h: 164 };
+  let L = layoutMateria(1414, 171, 6, { conto: C, ruota: R, maxD: 40 }); // embed 1565×225 meno i margini
+  prova("6 mesi su 1565×225: tre colonne, una sola riga di mesi, pallini >= 12px", L.modo === "orizzontale" && L.colonne === 6 && L.righe === 1 && L.d >= 12);
+  prova("il gruppo sta nella larghezza e nell'altezza", L.w1 + L.w2 + L.w3 + 2 * L.gap <= 1414 + 1e-6 && L.hMed <= 171 + 1e-6);
+  L = layoutMateria(216, 176, 1, { conto: C, ruota: R, maxD: 40 });
+  prova("1 mese su 240×200: impilato, pallini >= 6px, sta nell'altezza", L.modo === "impilato" && L.d >= 6 && L.hMed <= 176 + 1e-6);
+  prova("colonna 2 sempre la più larga in orizzontale (W da 1414 a 380, H 170-300, 1/3/6 mesi)",
+    [[1414, 171], [900, 250], [640, 300], [500, 228], [380, 228]].every(([w, h]) => [1, 3, 6].every(n => {
+      const l = layoutMateria(w, h, n, { conto: C, ruota: R, maxD: 40 });
+      return l.modo !== "orizzontale" || (l.w2 > l.w1 && l.w2 > l.w3 && l.w1 + l.w2 + l.w3 + 2 * l.gap <= w + 1e-6);
+    })));
+  prova("larghezze strette (216px) con altezze da 176 a 450: impilato, senza sforare l'altezza",
+    [176, 250, 300, 450].every(h => { const l = layoutMateria(216, h, 6, { conto: C, ruota: R, maxD: 40 }); return l.modo === "impilato" && l.hMed <= h + 1e-6; }));
+  prova("impilato: la ruota compare solo con spazio (alto) e sparisce con poco spazio",
+    layoutMateria(216, 450, 1, { conto: C, ruota: R, maxD: 40 }).mostraRuota === true && layoutMateria(216, 176, 6, { conto: C, ruota: R, maxD: 40 }).mostraRuota === false);
+  L = layoutMateria(1414, 171, 6, { ruota: R, maxD: 40 });
+  prova("senza riquadro (?label=0): due colonne, w1 = 0, mesi più larghi della ruota", L.modo === "orizzontale" && L.w1 === 0 && L.w2 > L.w3);
+  L = layoutMateria(1414, 171, 1, { conto: C, ruota: R, senzaMesi: true });
+  prova("senza date: la colonna 2 non occupa spazio", L.w2 === 0 && L.w1 > 0 && L.w3 > 0);
+  L = layoutMateria(1414, 171, 6, { conto: C, ruota: R, maxD: 10 });
+  prova("?size limita il diametro", L.d <= 10);
+  prova("isteresi: da impilato si resta impilato quando il vantaggio è appena sotto soglia, da orizzontale no",
+    (() => { const a = layoutMateria(300, 300, 6, { conto: C, ruota: R, maxD: 40 }); return layoutMateria(300, 300, 6, { conto: C, ruota: R, maxD: 40, prev: a.modo }).modo === a.modo; })());
+  L = layoutMateria(1414, 100, 6, { conto: C, ruota: R, pillole: { w: 150, h: 24, g: 8, rg: 4 }, maxD: 40 });
+  prova("altezza bassa (100px) con pillole: nessuno sforamento oltre il minimo di 3px", L.d >= 3 && (L.d === 3 || L.hMed <= 100 + 1e-6));
+  return out;
+}
+/* LAYOUT3-END */
 
 // ---------- Stato, orologio, storage ----------
 const cfg = leggiParametri(location.search);
@@ -1913,15 +1969,47 @@ function griglia(piano, appelli) {
   piano.items.forEach(p => g.append(pallino(p, appelli)));
   return g;
 }
+// Riquadro: "Mancano N giorni" → span.num (numero grande) + " giorni rimanenti": il textContent di .principale resta "N giorni rimanenti"
 function testo(t, appello) {
-  const p = el("p", "testo");
-  const principaleFormattato = typeof t.principale === "string"
-    ? t.principale.replace(/^Mancano (\d+) giorni$/i, "$1 giorni rimanenti")
-    : t.principale;
-  p.append(el("span", "principale", principaleFormattato));
+  const p = el("p", "testo"), pr = el("span", "principale");
+  const m = typeof t.principale === "string" ? t.principale.match(/^Mancano (\d+) giorni$/i) : null;
+  if (m) pr.append(el("span", "num", m[1]), document.createTextNode(" giorni rimanenti"));
+  else { pr.textContent = t.principale; pr.classList.add("medio"); }
+  p.append(pr);
   if (appello) p.append(el("span", "appello", appello)); // solo con più appelli (o solo il 2°)
   if (t.data) p.append(el("span", "data", t.data));
   return p;
+}
+
+// Mesi dal primo giorno del piano all'appello più lontano (tutti i mesi intermedi); stati dei giorni dal piano (applicaEventi).
+// Prima del piano: .passato; dopo l'ultimo appello: .fuori (tenue, non interattivo).
+function mesiMateria(piano, appelli) {
+  const p0 = piano.items[0].ms, u = piano.items[piano.items.length - 1].ms, a = new Date(p0), b = new Date(u);
+  const n = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + b.getUTCMonth() - a.getUTCMonth() + 1;
+  const mappa = new Map(piano.items.map(x => [x.ms, x]));
+  const wrap = el("div", "mesi-materia");
+  mesiPeriodo(formatISO(p0), n).forEach(m => {
+    const nome = MESI_LUNGHI[m.mese], blocco = el("div", "cal-mese"), lab = nascosto(el("div", "cal-mlab", nome + " " + m.anno));
+    blocco.setAttribute("role", "group");
+    blocco.setAttribute("aria-label", nome + " " + m.anno);
+    lab.dataset.lungo = nome + " " + m.anno;
+    lab.dataset.breve = MESI_ABBR[m.mese] + " " + m.anno;
+    lab.dataset.minimo = MESI_ABBR[m.mese];
+    const g = el("div", "griglia mese fitta");
+    g.style.setProperty("--col", "7");
+    LETTERE.forEach(l => g.append(nascosto(el("div", "gg", l))));
+    costruisciMese(m.anno, m.mese).forEach(c => {
+      if (c.ms === null) { g.append(nascosto(el("div", "vuoto"))); return; }
+      const x = mappa.get(c.ms);
+      if (x) { g.append(pallino(x, appelli)); return; }
+      const d = el("div", "dot " + (c.ms < p0 ? "passato" : "fuori"));
+      d.title = titoloGiorno(c.ms, c.ms < p0 ? "passato" : "futuro", false);
+      g.append(d);
+    });
+    blocco.append(lab, g);
+    wrap.append(blocco);
+  });
+  return wrap;
 }
 
 // Pillole "1° · 12 gen" / "2° · 2 feb": stessa selezione dei rombi, bersagli di tocco più comodi
@@ -1984,26 +2072,29 @@ function scheletro() {
   box.setAttribute("aria-busy", "true");
   box.setAttribute("aria-label", "Caricamento in corso");
   box.append(el("div", "sk sk-titolo"));
-  if (cfg.label) box.append(el("div", "sk sk-testo"));
-  // Stessa struttura del contenuto: blocco in alto, a sinistra la griglia (2 righe da 14, o 7 in ?mode=week), a destra la ruota
-  const sett = cfg.mode === "week";
-  const col = sett ? 7 : COLONNE_PALLINI;
-  const n = sett ? 7 : 2 * COLONNE_PALLINI;
-  const g = el("div", "griglia" + (sett ? " settimana" : ""));
-  g.dataset.col = String(col);
-  g.dataset.off = "0";
-  g.dataset.n = String(n);
-  g.style.setProperty("--col", String(col));
-  for (let i = 0; i < col; i++) g.append(el("div", "gg", "\u00a0"));
-  for (let i = 0; i < n; i++) g.append(el("div", "dot sk"));
-  box.append(g);
-  const rSk = nascosto(el("div", "ruota-giorni ruota-sk"));
+  // Stessa struttura del contenuto: riquadro | 3 mesi segnaposto (o una riga da 7 in ?mode=week) | ruota
+  if (cfg.label) { const c = el("div", "col-conto"); c.append(el("div", "sk sk-testo")); box.append(c); }
+  const cm = el("div", "col-mesi");
+  if (cfg.mode === "week") {
+    const g = el("div", "griglia settimana");
+    g.style.setProperty("--col", "7");
+    for (let i = 0; i < 7; i++) g.append(el("div", "gg", "\u00a0"));
+    for (let i = 0; i < 7; i++) g.append(el("div", "dot sk"));
+    cm.append(g);
+  } else {
+    const mm = el("div", "mesi-materia");
+    for (let i = 0; i < 3; i++) { const b = el("div", "cal-mese"); b.append(el("div", "cal-mlab"), el("div", "sk sk-mgrid")); mm.append(b); }
+    cm.append(mm);
+  }
+  box.append(cm);
+  const cr = el("div", "col-ruota"), rSk = nascosto(el("div", "ruota-giorni ruota-sk"));
   rSk.append(el("div", "ruota-arco"));
   const item0 = el("div", "ruota-item corrente");
   item0.style.setProperty("--ang", "0deg");
   item0.append(el("span", "ruota-nodo"), el("div", "giorno-focus sk"));
   rSk.append(item0);
-  box.append(rSk);
+  cr.append(rSk);
+  box.append(cr);
 }
 function errore() {
   box.className = "box neutro errore";
@@ -2026,10 +2117,11 @@ function costruisci() {
   box.className = "box";
   if (d.nome) box.append(el("div", "titolo", d.nome));
 
+  const cC = el("div", "col-conto"), cM = el("div", "col-mesi"), cR = el("div", "col-ruota"); // ordine nel DOM = ordine di tabulazione
   if (cfg.mode === "week") {
     box.setAttribute("aria-label", etichettaSettimana(d.nome, oggi));
-    if (cfg.label) box.append(testo({ principale: testoSettimana(oggi), data: "" }));
-    box.append(griglia(costruisciSettimana(oggi)));
+    if (cfg.label) cC.append(testo({ principale: testoSettimana(oggi), data: "" }));
+    cM.append(griglia(costruisciSettimana(oggi)));
   } else {
     // Appelli e itinere: con l'override ?exam= vengono ignorati (grezzo = null) e il widget resta com'è sempre stato
     const grezzo = cfg.hasExam ? null : st.grezzo;
@@ -2041,9 +2133,9 @@ function costruisci() {
 
     box.setAttribute("aria-label", etichettaAria(d.nome, oggi, esameSel) + (numerati ? ", " + etichettaAppello(selN) : ""));
     const t = testoConto(oggi, esameSel);
-    if (cfg.label || esameSel === null) box.append(testo(t, numerati ? dicituraConto(t.principale, selN) : "")); // "Data esame non impostata" resta sempre
+    if (cfg.label || esameSel === null) cC.append(testo(t, numerati ? dicituraConto(t.principale, selN) : "")); // "Data esame non impostata" resta sempre
     if (selezionabili && cfg.label) {
-      box.append(pillole(appelli, selN));
+      cM.append(pillole(appelli, selN));
       box.classList.add("con-appelli");
     }
     let piano;
@@ -2054,9 +2146,12 @@ function costruisci() {
     } else {
       piano = costruisciGiorni(oggi, esameSel, d.inizio);
     }
-    if (piano.items.length) box.append(griglia(piano, selezionabili ? appelli : null));
+    if (piano.items.length) cM.append(mesiMateria(piano, selezionabili ? appelli : null));
   }
-  box.append(ruotaGiorni(oggi));
+  if (cC.firstChild) box.append(cC);
+  if (cM.firstChild) box.append(cM);
+  cR.append(ruotaGiorni(oggi));
+  box.append(cR);
   if (st.nota) box.append(el("p", "nota", "dati non aggiornati"));
 }
 
@@ -2070,51 +2165,76 @@ function disegna() {
 }
 
 // ---------- Adattamento allo spazio reale dell'iframe ----------
-// Lo spazio si misura con grandezze che NON dipendono dal contenuto delle colonne: altezza del box meno le righe "auto"
-// (testo, pillole, nota) e larghezza del box meno la colonna della ruota. Poi si impostano --rk (ruota), --dp/--rg/--k
-// (pallini) e --hm (altezza del blocco centrale, per centrarlo in verticale). Nessuna di queste cambia le misure
-// lette, quindi non c'è retroazione. Le misure sono in px reali (viewport); con ?zoom i figli del box sono scalati,
-// perciò i valori CSS dentro la griglia valgono diametro / zoom.
+// Si misurano solo grandezze che NON dipendono dal contenuto delle colonne: larghezza e altezza interne del box (meno la nota)
+// e le dimensioni NATURALI (scala 1) di riquadro, ruota e riga di pillole. layoutMateria (pura) ne ricava larghezze, scale e
+// diametro; JS le passa come custom properties (--w1/--w2/--w3, --gap, --ck, --rk, --dp...). Nessuna di queste cambia le misure
+// lette: niente retroazione. Valori in px reali; con ?zoom i figli del box sono scalati, quindi i valori CSS dentro valgono px / zoom.
 const DIAMETRO_MIN = 3;
-let rafAdatta = 0;
+let rafAdatta = 0, modoLayout = null;
 function pianificaAdatta() {
   if (rafAdatta) return;
   rafAdatta = requestAnimationFrame(() => { rafAdatta = 0; adatta(); });
 }
+// Misure dei mesi della vista materia (stessa logica dell'annuale, adattaAnno resta invariata)
+function dimensionaMesi(m, colonne, d, z) {
+  const M = metricheMese(d);
+  m.style.setProperty("--mc", String(colonne));
+  m.style.setProperty("--dp", d / z + "px");
+  m.style.setProperty("--rg", String(RAPPORTO_GAP_MESI));
+  m.style.setProperty("--k", String(Math.max(0.25, Math.min(2, d / z / 14))));
+  m.style.setProperty("--fs", M.fs / z + "px");
+  m.style.setProperty("--lh", M.lh / z + "px");
+  m.style.setProperty("--gb", M.gb / z + "px");
+  m.classList.toggle("senza-gg", !M.lettere);
+  m.classList.toggle("mini", d < 8);
+  m.querySelectorAll(".cal-mlab").forEach(lab => {
+    if (!lab.dataset.lungo) return;
+    const stima = M.fs * 0.74, t = stima * lab.dataset.lungo.length <= M.w ? lab.dataset.lungo : stima * lab.dataset.breve.length <= M.w ? lab.dataset.breve : lab.dataset.minimo;
+    if (lab.textContent !== t) lab.textContent = t;
+  });
+}
 function adatta() {
   if (ca.attivo) return adattaAnno();
-  const ruota = box.querySelector(".ruota-giorni");
-  const g = box.querySelector(".griglia");
-  box.classList.toggle("senza-griglia", !g);
-  if (!ruota) { box.style.removeProperty("--hm"); return; }
-  const px = v => parseFloat(v) || 0;
-  const cs = getComputedStyle(box);
-  const innerW = box.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
-  const innerH = box.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom);
-  const righe = cs.gridTemplateRows.split(/\s+/).map(px);
-  const availH = Math.max(0, innerH - (righe[0] || 0) - (righe[1] || 0) - (righe[3] || 0));
-  // Ruota: dimensione naturale (rk = 1), poi ridotta se l'altezza o il 45% della larghezza non bastano
+  const cc = box.querySelector(".col-conto"), cm = box.querySelector(".col-mesi"), cr = box.querySelector(".col-ruota");
+  box.classList.toggle("senza-griglia", !box.querySelector(".griglia"));
+  if (!cr) { box.style.removeProperty("--hm"); return; }
+  const px = v => parseFloat(v) || 0, z = zoomVal, cs = getComputedStyle(box);
+  const nota = box.querySelector(".nota"), hNota = nota ? nota.getBoundingClientRect().height + 8 * z + 10 : 0;
+  const W = box.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
+  const H = box.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom) - hNota;
+  const dim = e => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height }; };
+  const ruota = cr.firstElementChild, mm = cm && cm.querySelector(".mesi-materia"), gw = cm && cm.querySelector(".griglia.settimana");
+  box.classList.remove("no-ruota"); // la ruota va misurata visibile
+  if (cc) cc.style.setProperty("--ck", "1");
   ruota.style.setProperty("--rk", "1");
-  const rr = ruota.getBoundingClientRect();
-  const k = scalaRuota(availH, rr.height, innerW * 0.45, rr.width, Math.min(0.4, 0.4 / zoomVal)); // con zoom alto la ruota può scendere di più (resta ≥ 0,4 in px visivi)
-  ruota.style.setProperty("--rk", String(k));
-  let hMed = rr.height * k;
-  if (g) {
-    const colonne = getComputedStyle(box).gridTemplateColumns.split(/\s+/).map(px);
-    const availW = colonne.length > 1 ? colonne[0] : innerW;
-    const n = Number(g.dataset.n) || 0;
-    const L = layoutPallini(availW, availH, Number(g.dataset.off) || 0, n, Number(g.dataset.col) || COLONNE_PALLINI,
-      0.4, DIAMETRO_MIN, Math.min(cfg.size, 40) * zoomVal, true); // ?size = diametro massimo (come prima, in unità zoomate)
-    const dp = L.d / zoomVal;
-    g.style.setProperty("--dp", dp + "px");
-    g.style.setProperty("--rg", String(L.rapportoGap));
-    g.style.setProperty("--k", String(Math.max(0.25, Math.min(2, dp / 14))));
-    g.classList.toggle("senza-gg", !L.lettere);
-    g.classList.toggle("mini", L.d < 8);
-    g.classList.toggle("fitta", n > 120);
-    hMed = Math.max(hMed, L.righe * L.d + (L.righe - 1) * L.d * L.rapportoGap);
+  const pl = cm && cm.querySelector(".appelli");
+  let pillole = null;
+  if (pl) { pl.style.maxWidth = "none"; const r = dim(pl); pl.style.maxWidth = ""; pillole = { w: r.w, h: r.h, g: 8 * z, rg: 4 * z }; }
+  const L = layoutMateria(W, H, mm ? mm.children.length : 1, {
+    conto: cc ? dim(cc.querySelector(".testo")) : null, ruota: dim(ruota), pillole,
+    senzaMesi: !cm, settimana: !mm, maxD: Math.min(cfg.size, 40) * z, prev: modoLayout // ?size = diametro massimo
+  });
+  modoLayout = L.modo;
+  box.classList.toggle("impilato", L.modo === "impilato");
+  box.classList.toggle("no-ruota", !L.mostraRuota);
+  box.classList.toggle("no-conto", !cc);
+  box.classList.toggle("no-mesi", !cm);
+  box.style.setProperty("--w1", L.w1 + "px");
+  box.style.setProperty("--w2", L.w2 + "px");
+  box.style.setProperty("--w3", L.w3 + "px");
+  box.style.setProperty("--gap", L.gap + "px");
+  box.style.setProperty("--gv", L.gv + "px");
+  if (cc) cc.style.setProperty("--ck", String(L.ck));
+  ruota.style.setProperty("--rk", String(L.rk));
+  if (mm) dimensionaMesi(mm, L.colonne, L.d, z);
+  else if (gw) {
+    gw.style.setProperty("--dp", L.d / z + "px");
+    gw.style.setProperty("--rg", String(L.rg));
+    gw.style.setProperty("--k", String(Math.max(0.25, Math.min(2, L.d / z / 14))));
+    gw.classList.toggle("senza-gg", !L.lettere);
+    gw.classList.toggle("mini", L.d < 8);
   }
-  if (hMed + 1 < availH) box.style.setProperty("--hm", Math.ceil(hMed) + "px");
+  if (L.hMed + 1 < H) box.style.setProperty("--hm", Math.ceil(L.hMed) + "px");
   else box.style.removeProperty("--hm");
 }
 
