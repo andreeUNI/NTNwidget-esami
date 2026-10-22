@@ -1982,11 +1982,12 @@ function testo(t, appello) {
 }
 
 // Mesi dal primo giorno del piano all'appello più lontano (tutti i mesi intermedi); stati dei giorni dal piano (applicaEventi).
-// Prima del piano: .passato; dopo l'ultimo appello: .fuori (tenue, non interattivo).
-function mesiMateria(piano, appelli) {
+// Prima del piano: .passato; dopo l'appello SELEZIONATO (fine) i giorni semplici diventano .fuori (tenui, non interattivi):
+// restano visibili il rombo dell'altro appello, gli itinere e l'anello "oggi". Senza fine vale l'ultimo appello.
+function mesiMateria(piano, appelli, fine) {
   const p0 = piano.items[0].ms, u = piano.items[piano.items.length - 1].ms, a = new Date(p0), b = new Date(u);
   const n = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + b.getUTCMonth() - a.getUTCMonth() + 1;
-  const mappa = new Map(piano.items.map(x => [x.ms, x]));
+  const mappa = new Map(piano.items.map(x => [x.ms, x])), f = Number.isFinite(fine) ? fine : u;
   const wrap = el("div", "mesi-materia");
   mesiPeriodo(formatISO(p0), n).forEach(m => {
     const nome = MESI_LUNGHI[m.mese], blocco = el("div", "cal-mese"), lab = nascosto(el("div", "cal-mlab", nome + " " + m.anno));
@@ -2001,7 +2002,7 @@ function mesiMateria(piano, appelli) {
     costruisciMese(m.anno, m.mese).forEach(c => {
       if (c.ms === null) { g.append(nascosto(el("div", "vuoto"))); return; }
       const x = mappa.get(c.ms);
-      if (x) { g.append(pallino(x, appelli)); return; }
+      if (x && !(c.ms > f && !x.appello && !x.itinere && !x.oggi)) { g.append(pallino(x, appelli)); return; }
       const d = el("div", "dot " + (c.ms < p0 ? "passato" : "fuori"));
       d.title = titoloGiorno(c.ms, c.ms < p0 ? "passato" : "futuro", false);
       g.append(d);
@@ -2146,7 +2147,7 @@ function costruisci() {
     } else {
       piano = costruisciGiorni(oggi, esameSel, d.inizio);
     }
-    if (piano.items.length) cM.append(mesiMateria(piano, selezionabili ? appelli : null));
+    if (piano.items.length) cM.append(mesiMateria(piano, selezionabili ? appelli : null, esameSel ? parseISO(esameSel) : null));
   }
   if (cC.firstChild) box.append(cC);
   if (cM.firstChild) box.append(cM);
