@@ -2271,7 +2271,7 @@ function legendaAnno(princ, recu, hex, vv) {
     k.append(w, t);
     key.append(k);
   });
-  (g.querySelector(".cal-rec") || L).append(key); // con materie di recupero la chiave sta nella 2ª riga; altrimenti resta sotto
+  L.prepend(key); // la chiave appello/itinere diventa la prima riga, sopra le materie normali
   return L;
 }
 
