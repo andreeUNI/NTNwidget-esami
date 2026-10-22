@@ -808,8 +808,8 @@ body {
 /* Pannello con sfondo "aurora" a palette fissa. Righe: 1 intestazione | 2 area dei mesi | 3 legenda | 4 nota.
    La riga 2 è minmax(0, 1fr): la sua altezza non dipende dal contenuto, quindi JS la misura senza cicli di retroazione. */
 .box.anno {
-  --a-base: #A6C9FF;
-  --a1: #0A0908; --a2: #22333B; --a3: #EAE0D5; --a4: #C6AC8F;
+  --a-base: #EAE0D5;
+  --a1: #C6AC8F; --a2: #C6AC8F; --a3: #F3ECE3; --a4: #B9A58C;
   --text: #12203A;   /* testo scuro su toni chiari: >= 10:1 sul punto più scuro */
   --soft: #22304F;   /* testo secondario: >= 8:1 */
   --cn: #26344F;     /* colore base neutro dei pallini senza eventi */
@@ -833,8 +833,8 @@ body {
 }
 @media (prefers-color-scheme: dark) {
   .box.anno {
-    --a-base: #131B4B;
-    --a1: #6B2FBF; --a2: #086A76; --a3: #94206F; --a4: #2B4BC0;
+    --a-base: #0A0908;
+    --a1: #22333B; --a2: #5E503F; --a3: #3A2E24; --a4: #2C4A52;
     --text: #F4F7FF;  /* testo chiaro su toni profondi (luminanza massima dello sfondo ~0,12): >= 5,5:1 */
     --soft: #DDE5FB;  /* >= 4,8:1 */
     --cn: #E3EAFF;
