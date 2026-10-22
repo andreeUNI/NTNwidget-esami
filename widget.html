@@ -809,7 +809,7 @@ body {
    La riga 2 è minmax(0, 1fr): la sua altezza non dipende dal contenuto, quindi JS la misura senza cicli di retroazione. */
 .box.anno {
   --a-base: #A6C9FF;
-  --a1: #7FD8FF; --a2: #CDB4FF; --a3: #8FF3CE; --a4: #FFC9A6;
+  --a1: #0A0908; --a2: #22333B; --a3: #EAE0D5; --a4: #C6AC8F;
   --text: #12203A;   /* testo scuro su toni chiari: >= 10:1 sul punto più scuro */
   --soft: #22304F;   /* testo secondario: >= 8:1 */
   --cn: #26344F;     /* colore base neutro dei pallini senza eventi */
@@ -994,9 +994,23 @@ body {
   font-size: clamp(8px, calc(6px + .7vw), 12px);
   line-height: 1.25;
   color: var(--text);
+  flex-direction: column;       /* NUOVO */
+  align-items: stretch;         /* era center */
+  gap: .35em;                   /* era .9em */
 }
-.cal-gruppi { flex: 0 1 auto; min-width: 0; margin: 0 auto; display: flex; flex-wrap: nowrap; align-items: center; gap: .9em; }
-.cal-voci { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; gap: min(.9em, 2vw); margin: 0; padding: 0; list-style: none; }
+.cal-gruppi { flex: 0 1 auto; 
+  min-width: 0; 
+  margin: 0 auto; 
+  display: flex; 
+  flex-wrap: nowrap; 
+  align-items: center; 
+  gap: .9em;  
+  flex-direction: column;       /* NUOVO: normali sopra, recupero sotto */
+  align-items: stretch;         /* era center */
+  gap: .35em;
+  margin: 0;                    /* era 0 auto */
+}
+.cal-voci { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; gap: min(.9em, 2vw); margin: 0; padding: 0; list-style: none; justify-content: center;}
 .cal-voce { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: .4em; }
 .cal-nome { position: relative; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-ok { flex: none; font-weight: 700; }
@@ -1013,9 +1027,12 @@ body {
   width: var(--sw);
   height: var(--sw);
 }
-.cal-rec { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; align-items: center; gap: .9em; padding-left: .9em; border-left: 1px dashed color-mix(in srgb, var(--text) 50%, transparent); }
+.cal-rec { flex: 0 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; align-items: center; gap: .9em; padding-left: .9em; border-left: 1px dashed color-mix(in srgb, var(--text) 50%, transparent);   justify-content: center;      /* NUOVO */
+  padding-left: 0;              /* era .9em */
+  border-left: 0;     
+}
 .cal-rec-et { flex: 0 0 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85em; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--soft); }
-.cal-key { flex: none; display: flex; align-items: center; gap: .9em; font-size: .92em; color: var(--soft); }
+.cal-key { flex: none; display: flex; align-items: center; gap: .9em; font-size: .92em; color: var(--soft); justify-content: center; }
 .cal-k { display: inline-flex; align-items: center; gap: .35em; white-space: nowrap; }
 @media (max-width: 419px) { .cal-key { display: none; } }
 .box.anno .nota { grid-row: 4; margin: 2px 0 0; font-size: 10px; color: var(--soft); }
@@ -2254,7 +2271,7 @@ function legendaAnno(princ, recu, hex, vv) {
     k.append(w, t);
     key.append(k);
   });
-  L.append(key);
+  (g.querySelector(".cal-rec") || L).append(key); // con materie di recupero la chiave sta nella 2ª riga; altrimenti resta sotto
   return L;
 }
 
