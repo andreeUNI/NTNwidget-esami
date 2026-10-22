@@ -968,11 +968,11 @@ body {
 .box.no-mesi { grid-template-columns: var(--w1) var(--w3); }
 .box.no-conto.no-mesi { grid-template-columns: var(--w3); }
 /* Modo impilato (larghezze strette): riquadro (+ ruota se avanza spazio) in alto, poi pillole e mesi a tutta larghezza */
-.box.impilato { grid-template-columns: var(--w1) var(--w3); grid-template-rows: auto auto auto; row-gap: var(--gv, 8px); }
+.box.impilato { grid-template-columns: var(--w1) var(--w3); grid-template-rows: auto auto auto; row-gap: 0; }
 .box.impilato.no-ruota, .box.impilato.no-conto { grid-template-columns: var(--w1); }
 .box.impilato > .col-conto { grid-column: 1; grid-row: 1; }
 .box.impilato > .col-ruota { grid-column: 2; grid-row: 1; }
-.box.impilato > .col-mesi { grid-column: 1 / -1; grid-row: 2; justify-self: center; width: max-content; }
+.box.impilato > .col-mesi { grid-column: 1 / -1; grid-row: 2; justify-self: center; width: max-content; margin-top: calc(var(--gv, 0px) / var(--z, 1)); }
 .box.impilato .nota { grid-row: 3; }
 .box.no-ruota > .col-ruota { display: none; } /* solo nel modo impilato: la ruota è decorativa e aria-hidden */
 .col-mesi .appelli { width: max-content; max-width: 100%; }
@@ -2193,13 +2193,20 @@ function dimensionaMesi(m, colonne, d, z) {
     if (lab.textContent !== t) lab.textContent = t;
   });
 }
+// Misura naturale del riquadro (anche lo scheletro .sk-testo), margini inclusi; null se non c'è
+function contoNat(cc, z) {
+  const t = cc && cc.querySelector(".testo, .sk-testo");
+  if (!t) return null;
+  const r = t.getBoundingClientRect(), c = getComputedStyle(t);
+  return { w: r.width, h: r.height + ((parseFloat(c.marginTop) || 0) + (parseFloat(c.marginBottom) || 0)) * z };
+}
 function adatta() {
   if (ca.attivo) return adattaAnno();
   const cc = box.querySelector(".col-conto"), cm = box.querySelector(".col-mesi"), cr = box.querySelector(".col-ruota");
   box.classList.toggle("senza-griglia", !box.querySelector(".griglia"));
   if (!cr) { box.style.removeProperty("--hm"); return; }
   const px = v => parseFloat(v) || 0, z = zoomVal, cs = getComputedStyle(box);
-  const nota = box.querySelector(".nota"), hNota = nota ? nota.getBoundingClientRect().height + 8 * z + 10 : 0;
+  const nota = box.querySelector(".nota"), hNota = nota ? nota.getBoundingClientRect().height + 8 * z : 0;
   const W = box.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
   const H = box.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom) - hNota;
   const dim = e => { const r = e.getBoundingClientRect(); return { w: r.width, h: r.height }; };
@@ -2211,7 +2218,7 @@ function adatta() {
   let pillole = null;
   if (pl) { pl.style.maxWidth = "none"; const r = dim(pl); pl.style.maxWidth = ""; pillole = { w: r.w, h: r.h, g: 8 * z, rg: 4 * z }; }
   const L = layoutMateria(W, H, mm ? mm.children.length : 1, {
-    conto: cc ? dim(cc.querySelector(".testo")) : null, ruota: dim(ruota), pillole,
+    conto: contoNat(cc, z), ruota: dim(ruota), pillole,
     senzaMesi: !cm, settimana: !mm, maxD: Math.min(cfg.size, 40) * z, prev: modoLayout // ?size = diametro massimo
   });
   modoLayout = L.modo;
